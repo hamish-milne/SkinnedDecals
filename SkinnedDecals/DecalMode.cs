@@ -1,16 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using UnityEngine;
 
 namespace SkinnedDecals
 {
+	[AttributeUsage(AttributeTargets.Class)]
+	public class DecalModeAttribute : Attribute
+	{
+	}
+
 	public abstract class DecalMode
 	{
 		public virtual int Order => 0;
 
-		public abstract DecalInstance Create(DecalProjector projector, Camera camera, Renderer renderer);
-
+		public abstract DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, Renderer renderer);
 	}
 }

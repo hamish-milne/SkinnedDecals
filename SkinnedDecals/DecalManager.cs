@@ -5,11 +5,6 @@ using UnityEngine;
 
 namespace SkinnedDecals
 {
-	[AttributeUsage(AttributeTargets.Class)]
-	public class DecalModeAttribute : Attribute
-	{
-	}
-
 	public class DecalManager : MonoBehaviour
 	{
 		private static DecalMode[] modes;
@@ -20,9 +15,28 @@ namespace SkinnedDecals
 		[SerializeField]
 		protected List<Camera> cameras = new List<Camera>();
 
+		[SerializeField] protected Mesh cubeMesh, sphereMesh;
+
+		public Mesh CubeMesh => cubeMesh;
+
+		public Mesh SphereMesh => sphereMesh;
+
 		public bool AllowExpensiveModes => allowExpensiveModes;
 
 		public List<Camera> Cameras => cameras;
+
+		public static DecalManager Current { get; private set; }
+
+		protected virtual void OnEnable()
+		{
+			Current = this;
+		}
+
+		protected virtual void OnDisable()
+		{
+			if (Current == this)
+				Current = null;
+		}
 		
 		protected static void RebuildModeList()
 		{
@@ -48,18 +62,23 @@ namespace SkinnedDecals
 			}
 		}
 
-		public virtual DecalInstance CreateDecal(Camera camera, DecalProjector projector, Renderer renderer)
+		public virtual DecalCameraInstance CreateDecal(DecalInstance parent, DecalCamera camera, Renderer renderer)
 		{
+			if (parent == null)
+				throw new ArgumentNullException(nameof(parent));
 			if (camera == null)
 				throw new ArgumentNullException(nameof(camera));
-			return modes?.Select(m => m.Create(projector, camera, renderer)).FirstOrDefault();
+			return modes?.Select(m => m.Create(parent, camera, renderer)).FirstOrDefault();
 		}
 
-		public Mesh cube;
-
-		public static Mesh GetCubeMesh()
+		public virtual DecalObject GetDecalObject(Renderer renderer)
 		{
-			return FindObjectOfType<DecalManager>().cube;
+			return renderer.GetOrAddInParent<DecalObject>();
+		}
+
+		public virtual DecalCamera GetDecalCamera(Camera camera)
+		{
+			return camera.GetOrAdd<DecalCamera>();
 		}
 	}
 }

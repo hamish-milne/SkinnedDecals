@@ -5,32 +5,7 @@ using UnityEngine;
 
 namespace SkinnedDecals
 {
-	public abstract class DecalInstance : IDisposable
-	{
-		private bool enabled;
 
-		public bool Enabled
-		{
-			get { return enabled; }
-			set
-			{
-				if (value && !enabled)
-					Enable();
-				else if (!value && enabled)
-					Disable();
-				enabled = value;
-			}
-		}
-
-
-		protected abstract void Enable();
-
-		protected abstract void Disable();
-
-		public abstract void Dispose();
-
-		public abstract Color Color { get; set; }
-	}
 
 	public class DecalProjector : MonoBehaviour
 	{
@@ -39,22 +14,25 @@ namespace SkinnedDecals
 		[SerializeField] protected new Camera camera;
 		[SerializeField] protected Transform testPoint;
 		[SerializeField] protected DecalManager manager;
+		[SerializeField] protected int priority;
 		private Renderer current;
 
-		private readonly List<DecalInstance> instances = new List<DecalInstance>();
+		private readonly List<DecalCameraInstance> instances = new List<DecalCameraInstance>();
 
 		public DecalTextureSet Decal => decal;
+
+		public int Priority => priority;
 
 		public void Project()
 		{
 			decal = ScriptableObject.CreateInstance<DecalTextureSet>();
-			decal.albedo = decalTex;
+			//decal.albedo = decalTex;
 
 			var thisBounds = new Bounds(transform.position, transform.lossyScale);
 			var renderers = FindObjectsOfType<Renderer>().Where(r => r.bounds.Intersects(thisBounds));
 			current = renderers.FirstOrDefault();
 
-			if (current != null)
+			/*if (current != null)
 			{
 				var instance = manager.CreateDecal(camera, this, current);
 				Debug.Log(instance);
@@ -63,7 +41,7 @@ namespace SkinnedDecals
 					instance.Enabled = true;
 					instances.Add(instance);
 				}
-			}
+			}*/
 		}
 
 		protected virtual void OnDrawGizmosSelected()
@@ -84,6 +62,8 @@ namespace SkinnedDecals
 		// TEST
 		protected virtual void Update()
 		{
+			//foreach(var o in instances)
+			//	o?.Update();
 			if (Input.GetKeyDown(KeyCode.A))
 				Project();
 		}

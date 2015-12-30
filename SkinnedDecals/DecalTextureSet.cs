@@ -4,13 +4,12 @@ namespace SkinnedDecals
 {
 	public class DecalTextureSet : ScriptableObject
 	{
-		[SerializeField] public Texture2D albedo, normal, roughness;
+		[SerializeField] protected Texture2D albedo, normal, roughness, height, emission;
 
-		public virtual void GetTextures(out Texture2D albedo, out Texture2D normal, out Texture2D roughness)
-		{
-			albedo = this.albedo;
-			normal = this.normal;
-			roughness = this.roughness;
-		}
+		public virtual Texture2D Albedo => albedo;
+		public virtual Texture2D Normal => normal;
+		public virtual Texture2D Roughness => roughness;
+		public virtual Texture2D Height => height;
+		public virtual Texture2D Emission => emission;
 	}
 }

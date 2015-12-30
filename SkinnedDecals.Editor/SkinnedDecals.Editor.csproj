@@ -4,57 +4,51 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{9BFB98D3-6C56-4BD8-88D2-C9553BBC77F5}</ProjectGuid>
+    <ProjectGuid>{4CD2B243-C6BE-40FD-AA29-F19ACAD8FB94}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SkinnedDecals</RootNamespace>
-    <AssemblyName>SkinnedDecals</AssemblyName>
+    <RootNamespace>SkinnedDecals.Editor</RootNamespace>
+    <AssemblyName>SkinnedDecals.Editor</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>false</DebugSymbols>
-    <DebugType>none</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>..\Assets\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>none</DebugType>
+    <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\Assets\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="DecalCamera.cs" />
-    <Compile Include="DecalInstance.cs" />
-    <Compile Include="DecalData.cs" />
-    <Compile Include="DecalManager.cs" />
-    <Compile Include="DecalMode.cs" />
-    <Compile Include="DecalObject.cs" />
-    <Compile Include="DecalProjector.cs" />
-    <Compile Include="DecalTextureSet.cs" />
-    <Compile Include="Internal\Instances.cs" />
-    <Compile Include="Internal\Modes.cs" />
-    <Compile Include="Internal\ProjectionUtility.cs" />
+    <Compile Include="DecalObjectEditor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SortedList.cs" />
-    <Compile Include="Utility.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="UnityEditor">
+      <HintPath>..\..\..\..\..\..\Program Files\Unity\Editor\Data\Managed\UnityEditor.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\..\..\Program Files\Unity\Editor\Data\Managed\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shaders\DecalScreenSpace.shader">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <ProjectReference Include="..\SkinnedDecals\SkinnedDecals.csproj">
+      <Project>{9bfb98d3-6c56-4bd8-88d2-c9553bbc77f5}</Project>
+      <Name>SkinnedDecals</Name>
+      <Private>False</Private>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

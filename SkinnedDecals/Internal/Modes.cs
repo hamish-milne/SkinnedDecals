@@ -1,5 +1,4 @@
 ﻿
-using System;
 using UnityEngine;
 
 namespace SkinnedDecals.Internal
@@ -9,12 +8,11 @@ namespace SkinnedDecals.Internal
 	{
 		public override int Order => -3;
 
-		public override DecalInstance Create(DecalProjector projector, Camera camera, Renderer renderer)
+		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, Renderer renderer)
 		{
-			//if (camera.actualRenderingPath != RenderingPath.DeferredShading || renderer is SkinnedMeshRenderer)
-				// AND allow screen space for DecalObject...
-			//	return null;
-			return new ScreenSpaceInstance(camera, projector, renderer, DecalManager.GetCubeMesh());
+			if (!camera.IsDeferred || renderer is SkinnedMeshRenderer || !DecalObject.GetDecalParent(renderer).AllowScreenSpace)
+				return null;
+			return new ScreenSpaceInstance(parent, camera, renderer, DecalManager.Current.CubeMesh);
 		}
 	}
 
@@ -23,49 +21,58 @@ namespace SkinnedDecals.Internal
 	{
 		public override int Order => -2;
 
-		public override DecalInstance Create(DecalProjector projector, Camera camera, Renderer renderer)
+		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, Renderer renderer)
 		{
-			if (camera.actualRenderingPath != RenderingPath.DeferredShading || renderer is SkinnedMeshRenderer)
+			if (!camera.IsDeferred || renderer is SkinnedMeshRenderer)
 				return null;
-			return new DeferredStaticInstance(camera, renderer, projector);
+			return new DeferredStaticInstance(parent, camera, renderer);
 		}
 	}
 
 	[DecalMode]
-	public class StaticForwardMode : DecalMode
+	public class SkinnedDeferredMode : DecalMode
 	{
 		public override int Order => -1;
 
-		public override DecalInstance Create(DecalProjector projector, Camera camera, Renderer renderer)
+		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, Renderer renderer)
 		{
-			if (renderer is SkinnedMeshRenderer)
+			var smr = renderer as SkinnedMeshRenderer;
+			if (!camera.IsDeferred || smr == null)
 				return null;
-			return new ForwardStaticInstance(camera, renderer, projector);
+			return new DeferredSkinnedInstance(parent, camera, smr);
 		}
 	}
 
-	public abstract class SkinnedMode : DecalMode
-	{
-		
-
-		
-	}
-
 	/*[DecalMode]
-	public class SkinnedDeferredMode : SkinnedMode
-	{
-
-	}
-
-	[DecalMode]
-	public class SkinnedForwardMode : SkinnedMode
-	{
-
-	}
-
-	[DecalMode]
 	public class RenderObjectMode : DecalMode
 	{
 
 	}*/
+
+	[DecalMode]
+	public class StaticForwardMode : DecalMode
+	{
+		public override int Order => 1;
+
+		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, Renderer renderer)
+		{
+			if (camera.IsDeferred || renderer is SkinnedMeshRenderer)
+				return null;
+			return new ForwardStaticInstance(parent, camera, renderer);
+		}
+	}
+
+	[DecalMode]
+	public class SkinnedForwardMode : DecalMode
+	{
+		public override int Order => 2;
+
+		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, Renderer renderer)
+		{
+			var smr = renderer as SkinnedMeshRenderer;
+			if (camera.IsDeferred || smr == null)
+				return null;
+			return new ForwardSkinnedInstance(parent, camera, smr);
+		}
+	}
 }
