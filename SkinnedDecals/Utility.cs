@@ -1,10 +1,13 @@
 ﻿using UnityEngine;
+using System;
+using System.Collections.Generic;
 
 namespace SkinnedDecals
 {
 	public static class Utility
 	{
-		public static void SetTextureKeyword(this Material material, string property, string keyword, Texture texture)
+		public static void SetTextureKeyword(this Material material, string property,
+			string keyword, Texture texture)
 		{
 			material.SetTexture(property, texture);
 			if(texture)
@@ -45,6 +48,23 @@ namespace SkinnedDecals
 			if (ret == null)
 				ret = obj.gameObject.AddComponent<T>();
 			return ret;
+		}
+		
+		public static bool CheckList<T>(this List<T> list, T item, ListMode mode)
+		{
+			if(list == null)
+				throw new ArgumentNullException(nameof(list));
+			switch(mode)
+			{
+				case ListMode.None:
+					return true;
+				case ListMode.Blacklist:
+					return !list.Contains(item);
+				case ListMode.Whitelist:
+					return list.Contains(item);
+				default:
+					throw new ArgumentOutOfRangeException(nameof(mode));
+			}
 		}
 	}
 }

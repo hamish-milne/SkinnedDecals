@@ -1,8 +1,23 @@
 ﻿
 using UnityEngine;
+using System.Linq;
 
 namespace SkinnedDecals.Internal
 {
+	public abstract class DecalModeBase : DecalMode
+	{
+		public static bool AddRenderer<TDecal, TRenderer>(DecalInstance parent, TRenderer r)
+			where TDecal : DecalCameraInstance, DecalRendererList<TRenderer>
+			where TRenderer : Renderer
+		{
+			var obj = parent.Instances.OfType<TDecal>().FirstOrDefault();
+			if(obj == null)
+				return false;
+			obj.AddRenderer(r);
+			return true;
+		}
+	}
+	
 	[DecalMode]
 	public class ScreenSpaceMode : DecalMode
 	{
@@ -10,7 +25,7 @@ namespace SkinnedDecals.Internal
 
 		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, Renderer renderer)
 		{
-			if (!camera.IsDeferred || renderer is SkinnedMeshRenderer || !DecalObject.GetDecalParent(renderer).AllowScreenSpace)
+			if (!camera.IsDeferred || renderer is SkinnedMeshRenderer || !parent.Object.AllowScreenSpace)
 				return null;
 			return new ScreenSpaceInstance(parent, camera, renderer, DecalManager.Current.CubeMesh);
 		}

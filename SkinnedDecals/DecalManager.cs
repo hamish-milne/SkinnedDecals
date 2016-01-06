@@ -62,18 +62,24 @@ namespace SkinnedDecals
 			}
 		}
 
-		public virtual DecalCameraInstance CreateDecal(DecalInstance parent, DecalCamera camera, Renderer renderer)
+		public virtual DecalCameraInstance[] CreateDecal(DecalInstance parent, DecalCamera camera)
 		{
 			if (parent == null)
 				throw new ArgumentNullException(nameof(parent));
 			if (camera == null)
 				throw new ArgumentNullException(nameof(camera));
-			return modes?.Select(m => m.Create(parent, camera, renderer)).FirstOrDefault();
+			var arr = parent.Object.Renderers
+				.Select(r => modes
+					.Select(m => m.Create(parent, camera, r))
+					.FirstOrDefault(i => i != null)
+				).Where(i => i != null).ToArray();
+			return arr;
 		}
 
 		public virtual DecalObject GetDecalObject(Renderer renderer)
 		{
-			return renderer.GetOrAddInParent<DecalObject>();
+			var obj = renderer.GetOrAddInParent<DecalObject>();
+			return obj.Renderers.Contains(renderer) ? obj : null;
 		}
 
 		public virtual DecalCamera GetDecalCamera(Camera camera)

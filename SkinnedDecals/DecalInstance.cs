@@ -31,19 +31,19 @@ namespace SkinnedDecals
 		public abstract void Dispose();
 
 		public abstract Color Color { get; set; }
-
-		public abstract DecalProjector Projector { get; }
+		
+		public abstract DecalData Decal { get; }
 
 		public abstract DecalObject Object { get; }
 
 		public abstract int Priority { get; }
 	}
 
-	public abstract class DecalCameraInstance : DecalInstanceBase, IComparable<DecalCameraInstance>
+	public abstract class DecalCameraInstance : DecalInstanceBase
 	{
 		public DecalInstance Parent { get; }
-
-		public override DecalProjector Projector => Parent.Projector;
+		
+		public override DecalData Decal => Parent.Decal;
 
 		public override DecalObject Object => Parent.Object;
 
@@ -59,11 +59,6 @@ namespace SkinnedDecals
 				throw new ArgumentNullException(nameof(camera));
 			Parent = parent;
 			Camera = camera;
-		}
-
-		public int CompareTo(DecalCameraInstance other)
-		{
-			return Priority.CompareTo(other?.Priority ?? 0);
 		}
 
 		public override bool ActiveInScene
@@ -83,7 +78,7 @@ namespace SkinnedDecals
 		}
 	}
 
-	public class DecalInstance : DecalInstanceBase
+	public class DecalInstance : DecalInstanceBase, IComparable<DecalCameraInstance>
 	{
 		public override bool ActiveSelf
 		{
@@ -104,21 +99,21 @@ namespace SkinnedDecals
 				c.ActiveSelf = c.ActiveSelf;
 		}
 
-		public override DecalProjector Projector { get; }
+		public override DecalData Decal { get; }
 
 		public override DecalObject Object { get; }
 
 		public override int Priority { get; }
 
-		public DecalInstance(DecalProjector projector, DecalObject obj)
+		public DecalInstance(int priority, DecalData decal, DecalObject obj)
 		{
-			if(projector == null)
-				throw new ArgumentNullException(nameof(projector));
+			if(decal == null)
+				throw new ArgumentNullException(nameof(decal));
 			if(obj == null)
 				throw new ArgumentNullException(nameof(obj));
-			Projector = projector;
+			Decal = decal;
 			Object = obj;
-			Priority = projector.Priority;
+			Priority = priority;
 		}
 
 		private readonly List<DecalCameraInstance> instances
@@ -135,33 +130,25 @@ namespace SkinnedDecals
 			return null;
 		}
 
-		public virtual void AddInstance(DecalCameraInstance instance)
-		{
-			if(instance == null)
-				throw new ArgumentNullException(nameof(instance));
-			if(instance.Parent != this)
-				throw new ArgumentException("Incorrect parent reference");
-			if(instances.Exists(obj => obj.Camera == instance.Camera))
-				throw new ArgumentException("Camera instance already exists. Try Clear() first");
-			instances.Add(instance);
-		}
-
 		public List<DecalCameraInstance> Instances { get; } = new List<DecalCameraInstance>();
 
 		protected virtual void CameraAddRemove(DecalCamera camera, bool active)
 		{
 			if (active)
 			{
-				var newInstance = DecalManager.Current.CreateDecal(this, camera, null);
-				newInstance.Color = Color;
-				instances.Add(newInstance);
+				foreach(var obj in DecalManager.Current.CreateDecal(this, camera))
+				{
+					obj.Color = Color;
+					instances.Add(obj);
+				}
 			}
 			else
 			{
-				var obj = instances.FirstOrDefault(o => o.Camera == camera);
-				if (obj == null) return;
-				obj.Dispose();
-				instances.Remove(obj);
+				foreach(var obj in instances.Where(o => o.Camera == camera).ToArray())
+				{
+					obj.Dispose();
+					instances.Remove(obj);
+				}
 			}
 		}
 
@@ -188,6 +175,13 @@ namespace SkinnedDecals
 		{
 			Clear();
 		}
+		
+		public virtual void Reload()
+		{
+			Clear();
+			foreach(var camera in DecalCamera.ActiveCameras)
+				CameraAddRemove(camera, true);
+		}
 
 		protected Color color;
 
@@ -201,5 +195,15 @@ namespace SkinnedDecals
 					o.Color = value;
 			}
 		}
+		
+		public int CompareTo(DecalCameraInstance other)
+		{
+			return Priority.CompareTo(other?.Priority ?? 0);
+		}
+	}
+	
+	public interface DecalRendererList<T> where T : Renderer
+	{
+		void AddRenderer(T renderer);
 	}
 }
