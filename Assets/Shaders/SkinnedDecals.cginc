@@ -1,10 +1,10 @@
-#ifdef _FORWARD
+﻿#ifdef _FORWARD
 	#include "UnityCG.cginc"
 #endif
 	
 #ifdef _SKINNED
-	Buffer<float3> _DecalUV1, _DecalUV2;
-	uint _VertexOffset1, _VertexOffset2;
+	Buffer<float3> _UvBuffer1, _UvBuffer2;
+	uint _BufferOffset1, _BufferOffset2;
 #else
 	float4x4 _Object2Projector;
 #endif
@@ -60,10 +60,10 @@
 #endif
 #ifdef _SKINNED
 		float3 value;
-		if(id >= _VertexOffset2)
-			value = _DecalUV2[id - _VertexOffset2];
+		if(id >= _BufferOffset2)
+			value = _UvBuffer2[id - _BufferOffset2];
 		else
-			value = _DecalUV1[id - _VertexOffset1];
+			value = _UvBuffer1[id - _BufferOffset1];
 		o.uv = value.xy;
 		o.clip = value.z > 0 ? 1e-20 : -1.#INF;
 #else

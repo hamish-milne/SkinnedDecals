@@ -12,9 +12,6 @@ namespace SkinnedDecals
 		[SerializeField]
 		protected bool allowExpensiveModes;
 
-		[SerializeField]
-		protected List<Camera> cameras = new List<Camera>();
-
 		[SerializeField] protected Mesh cubeMesh, sphereMesh;
 
 		public Mesh CubeMesh => cubeMesh;
@@ -22,8 +19,6 @@ namespace SkinnedDecals
 		public Mesh SphereMesh => sphereMesh;
 
 		public bool AllowExpensiveModes => allowExpensiveModes;
-
-		public List<Camera> Cameras => cameras;
 
 		public static DecalManager Current { get; private set; }
 
@@ -62,18 +57,44 @@ namespace SkinnedDecals
 			}
 		}
 
+		private static DecalCameraInstance CreateDecal(DecalInstance parent, DecalCamera camera, int i)
+		{
+			// ReSharper disable once LoopCanBeConvertedToQuery
+			foreach (var m in modes)
+			{
+				var obj = m.Create(parent, camera, i);
+				if (obj == null) continue;
+				return obj;
+			}
+			return null;
+		}
+
 		public virtual DecalCameraInstance[] CreateDecal(DecalInstance parent, DecalCamera camera)
 		{
 			if (parent == null)
 				throw new ArgumentNullException(nameof(parent));
 			if (camera == null)
 				throw new ArgumentNullException(nameof(camera));
-			var arr = parent.Object.Renderers
-				.Select(r => modes
-					.Select(m => m.Create(parent, camera, r))
-					.FirstOrDefault(i => i != null)
-				).Where(i => i != null).ToArray();
-			return arr;
+
+			var list = new List<DecalCameraInstance>();
+			if(parent.Object.Renderers != null)
+				for (int i = 0, l = parent.Object.Renderers.Count; i < l; i++)
+				{
+					Profiler.BeginSample("Creating decal for " + parent.Object.Renderers[i]);
+					var obj = CreateDecal(parent, camera, i);
+					if(obj != null) list.Add(obj);
+					Profiler.EndSample();
+				}
+			if (parent.Object.AllowScreenSpace && list.Count == 0)
+			{
+				var obj = CreateDecal(parent, camera, -1);
+				if (obj != null)
+				{
+					list.Add(obj);
+					obj.ActiveSelf = true;
+				}
+			}
+			return list.ToArray();
 		}
 
 		public virtual DecalObject GetDecalObject(Renderer renderer)

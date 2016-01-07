@@ -16,7 +16,7 @@
     <DebugType>none</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>..\Assets\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;ENABLE_PROFILER</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -31,7 +31,6 @@
   <ItemGroup>
     <Compile Include="DecalCamera.cs" />
     <Compile Include="DecalInstance.cs" />
-    <Compile Include="DecalData.cs" />
     <Compile Include="DecalManager.cs" />
     <Compile Include="DecalMode.cs" />
     <Compile Include="DecalObject.cs" />
@@ -39,13 +38,24 @@
     <Compile Include="DecalTextureSet.cs" />
     <Compile Include="Internal\Instances.cs" />
     <Compile Include="Internal\Modes.cs" />
+    <Compile Include="MeshUtility.cs" />
     <Compile Include="ProjectionUtility.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SortedList.cs" />
     <Compile Include="Utility.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Shaders\DecalSkinned.shader">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Shaders\DecalRenderer.shader">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Shaders\DecalScreenSpace.shader">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Shaders\DecalStatic.shader" />
+    <None Include="Shaders\SkinnedDecals.cginc">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

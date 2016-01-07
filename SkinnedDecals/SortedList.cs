@@ -1,20 +1,30 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace SkinnedDecals
 {
+	[Serializable]
 	public class SortedList<T> : ICollection<T>
 	{
-		private readonly IComparer<T> comparer; 
+		private readonly Comparison<T> comparison; 
 
-		private readonly List<T> list = new List<T>();
+		[SerializeField]
+		protected List<T> list = new List<T>();
+
+		public SortedList(Comparison<T> comparison)
+		{
+			if(comparison == null)
+				throw new ArgumentNullException(nameof(comparison));
+			this.comparison = comparison;
+		}
 
 		public SortedList(IComparer<T> comparer)
 		{
 			if(comparer == null)
 				throw new ArgumentNullException(nameof(comparer));
-			this.comparer = comparer;
+			comparison = comparer.Compare;
 		}
 
 		public SortedList() : this(Comparer<T>.Default)
@@ -41,7 +51,7 @@ namespace SkinnedDecals
 			if (item == null)
 				return;
 			for(int i = 0; i < list.Count; i++)
-				if (comparer.Compare(list[i], item) >= 0)
+				if (comparison(list[i], item) >= 0)
 				{
 					list.Insert(i, item);
 					return;

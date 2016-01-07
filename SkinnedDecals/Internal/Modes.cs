@@ -1,5 +1,4 @@
-﻿
-using UnityEngine;
+﻿using UnityEngine;
 using System.Linq;
 
 namespace SkinnedDecals.Internal
@@ -7,7 +6,7 @@ namespace SkinnedDecals.Internal
 	public abstract class DecalModeBase : DecalMode
 	{
 		public static bool AddRenderer<TDecal, TRenderer>(DecalInstance parent, TRenderer r)
-			where TDecal : DecalCameraInstance, DecalRendererList<TRenderer>
+			where TDecal : DecalCameraInstance, IDecalRendererList<TRenderer>
 			where TRenderer : Renderer
 		{
 			var obj = parent.Instances.OfType<TDecal>().FirstOrDefault();
@@ -23,11 +22,11 @@ namespace SkinnedDecals.Internal
 	{
 		public override int Order => -3;
 
-		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, Renderer renderer)
+		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, int rendererIndex)
 		{
-			if (!camera.IsDeferred || renderer is SkinnedMeshRenderer || !parent.Object.AllowScreenSpace)
+			if (!camera.IsDeferred || rendererIndex >= 0 || !parent.Object.AllowScreenSpace)
 				return null;
-			return new ScreenSpaceInstance(parent, camera, renderer, DecalManager.Current.CubeMesh);
+			return new ScreenSpaceInstance(parent, camera);
 		}
 	}
 
@@ -36,11 +35,12 @@ namespace SkinnedDecals.Internal
 	{
 		public override int Order => -2;
 
-		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, Renderer renderer)
+		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, int rendererIndex)
 		{
-			if (!camera.IsDeferred || renderer is SkinnedMeshRenderer)
+			if (!camera.IsDeferred || rendererIndex < 0 ||
+				parent.Object.Renderers[rendererIndex] is SkinnedMeshRenderer)
 				return null;
-			return new DeferredStaticInstance(parent, camera, renderer);
+			return new DeferredStaticInstance(parent, camera, rendererIndex);
 		}
 	}
 
@@ -49,31 +49,38 @@ namespace SkinnedDecals.Internal
 	{
 		public override int Order => -1;
 
-		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, Renderer renderer)
+		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, int rendererIndex)
 		{
-			var smr = renderer as SkinnedMeshRenderer;
-			if (!camera.IsDeferred || smr == null)
+			if (!camera.IsDeferred || rendererIndex < 0)
 				return null;
-			return new DeferredSkinnedInstance(parent, camera, smr);
+			return new DeferredSkinnedInstance(parent, camera, rendererIndex);
 		}
 	}
 
-	/*[DecalMode]
+	[DecalMode]
 	public class RenderObjectMode : DecalMode
 	{
+		public override int Order => 0;
 
-	}*/
+		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, int rendererIndex)
+		{
+			if (!DecalManager.Current.AllowExpensiveModes || rendererIndex < 0)
+				return null;
+			return new RenderObjectInstance(parent, camera, rendererIndex);
+		}
+	}
 
 	[DecalMode]
 	public class StaticForwardMode : DecalMode
 	{
 		public override int Order => 1;
 
-		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, Renderer renderer)
+		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, int rendererIndex)
 		{
-			if (camera.IsDeferred || renderer is SkinnedMeshRenderer)
+			if (camera.IsDeferred || rendererIndex < 0 ||
+				parent.Object.Renderers[rendererIndex] is SkinnedMeshRenderer)
 				return null;
-			return new ForwardStaticInstance(parent, camera, renderer);
+			return new ForwardStaticInstance(parent, camera, rendererIndex);
 		}
 	}
 
@@ -82,12 +89,11 @@ namespace SkinnedDecals.Internal
 	{
 		public override int Order => 2;
 
-		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, Renderer renderer)
+		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, int rendererIndex)
 		{
-			var smr = renderer as SkinnedMeshRenderer;
-			if (camera.IsDeferred || smr == null)
+			if (camera.IsDeferred || rendererIndex < 0)
 				return null;
-			return new ForwardSkinnedInstance(parent, camera, smr);
+			return new ForwardSkinnedInstance(parent, camera, rendererIndex);
 		}
 	}
 }

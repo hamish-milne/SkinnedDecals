@@ -32,7 +32,7 @@ namespace SkinnedDecals
 
 		public abstract Color Color { get; set; }
 		
-		public abstract DecalData Decal { get; }
+		public abstract DecalTextureSet Decal { get; }
 
 		public abstract DecalObject Object { get; }
 
@@ -43,7 +43,7 @@ namespace SkinnedDecals
 	{
 		public DecalInstance Parent { get; }
 		
-		public override DecalData Decal => Parent.Decal;
+		public override DecalTextureSet Decal => Parent.Decal;
 
 		public override DecalObject Object => Parent.Object;
 
@@ -76,10 +76,71 @@ namespace SkinnedDecals
 				ActiveInScene = value && Parent.ActiveInScene;
 			}
 		}
+
+		public virtual void OnPreRender() { }
 	}
 
-	public class DecalInstance : DecalInstanceBase, IComparable<DecalCameraInstance>
+	[Serializable]
+	public class DecalInstance : DecalInstanceBase
 	{
+		[Serializable]
+		protected class RendererData
+		{
+			public Matrix4x4 objectToProjector;
+			public Vector3[] uvData;
+		}
+
+		[SerializeField]
+		protected DecalTextureSet decal;
+		[SerializeField]
+		protected Matrix4x4 objectToProjector;
+		[SerializeField]
+		protected List<RendererData> rendererData = new List<RendererData>();
+
+		public override DecalTextureSet Decal => decal;
+
+		public virtual Matrix4x4 ObjectToProjector
+		{
+			get { return objectToProjector; }
+			set { objectToProjector = value; }
+		}
+
+		RendererData GetData(int index, bool add = false)
+		{
+			if (index < 0)
+				return null;
+			if (add)
+			{
+				while (index >= rendererData.Count)
+					rendererData.Add(null);
+				return (rendererData[index] ?? (rendererData[index] = new RendererData()));
+			}
+			else
+			{
+				return index >= rendererData.Count ? null : rendererData[index];
+			}
+		}
+
+		public virtual Matrix4x4 GetProjectionMatrix(int index)
+		{
+			return GetData(index)?.objectToProjector ?? objectToProjector;
+		}
+
+		public virtual void SetProjectionMatrix(int index, Matrix4x4 matrix)
+		{
+			GetData(index, true).objectToProjector = matrix;
+		}
+
+		public virtual Vector3[] GetUvData(int index)
+		{
+			return GetData(index)?.uvData;
+		}
+
+		public virtual void SetUvData(int index, Vector3[] uvData)
+		{
+			GetData(index, true).uvData = uvData;
+		}
+
 		public override bool ActiveSelf
 		{
 			get
@@ -99,19 +160,22 @@ namespace SkinnedDecals
 				c.ActiveSelf = c.ActiveSelf;
 		}
 
-		public override DecalData Decal { get; }
-
 		public override DecalObject Object { get; }
 
 		public override int Priority { get; }
 
-		public DecalInstance(int priority, DecalData decal, DecalObject obj)
+		public DecalInstance()
+		{
+			Instances = instances.AsReadOnly();
+		}
+
+		public DecalInstance(int priority, DecalTextureSet decal, DecalObject obj) : this()
 		{
 			if(decal == null)
 				throw new ArgumentNullException(nameof(decal));
 			if(obj == null)
 				throw new ArgumentNullException(nameof(obj));
-			Decal = decal;
+			this.decal = decal;
 			Object = obj;
 			Priority = priority;
 		}
@@ -130,7 +194,7 @@ namespace SkinnedDecals
 			return null;
 		}
 
-		public List<DecalCameraInstance> Instances { get; } = new List<DecalCameraInstance>();
+		public IList<DecalCameraInstance> Instances { get; }
 
 		protected virtual void CameraAddRemove(DecalCamera camera, bool active)
 		{
@@ -140,6 +204,7 @@ namespace SkinnedDecals
 				{
 					obj.Color = Color;
 					instances.Add(obj);
+					camera.Instances.Add(obj);
 				}
 			}
 			else
@@ -148,6 +213,7 @@ namespace SkinnedDecals
 				{
 					obj.Dispose();
 					instances.Remove(obj);
+					camera.Instances.Remove(obj);
 				}
 			}
 		}
@@ -166,9 +232,11 @@ namespace SkinnedDecals
 
 		public void Clear()
 		{
-			foreach (var o in Instances)
+			foreach (var o in instances)
+			{
 				o?.Dispose();
-			Instances.Clear();
+			}
+			instances.Clear();
 		}
 
 		public override void Dispose()
@@ -179,8 +247,11 @@ namespace SkinnedDecals
 		public virtual void Reload()
 		{
 			Clear();
-			foreach(var camera in DecalCamera.ActiveCameras)
-				CameraAddRemove(camera, true);
+			// ReSharper disable once ForCanBeConvertedToForeach
+			for (int i = 0; i < DecalCamera.ActiveCameras.Count; i++)
+			{
+				CameraAddRemove(DecalCamera.ActiveCameras[i], true);
+			}
 		}
 
 		protected Color color;
@@ -191,18 +262,13 @@ namespace SkinnedDecals
 			set
 			{
 				color = value;
-				foreach (var o in Instances)
+				foreach (var o in instances)
 					o.Color = value;
 			}
 		}
-		
-		public int CompareTo(DecalCameraInstance other)
-		{
-			return Priority.CompareTo(other?.Priority ?? 0);
-		}
 	}
 	
-	public interface DecalRendererList<T> where T : Renderer
+	public interface IDecalRendererList<in T> where T : Renderer
 	{
 		void AddRenderer(T renderer);
 	}

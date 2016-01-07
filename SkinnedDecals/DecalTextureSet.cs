@@ -2,6 +2,7 @@
 
 namespace SkinnedDecals
 {
+	[CreateAssetMenu]
 	public class DecalTextureSet : ScriptableObject
 	{
 		[SerializeField] protected Texture2D albedo, normal, roughness, height, emission;

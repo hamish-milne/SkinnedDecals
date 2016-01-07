@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
+// ReSharper disable DoNotCallOverridableMethodsInConstructor
 
 namespace SkinnedDecals.Internal
 {
@@ -11,15 +12,10 @@ namespace SkinnedDecals.Internal
 		protected readonly Renderer renderer;
 		protected Material material;
 		protected Material[] sharedMaterials;
-		protected readonly CommandBuffer cmd;
 		protected Material[] materials;
 		protected readonly int submeshMask;
 
-		protected abstract CameraEvent CameraEvent { get; }
-
-		protected abstract string CommandName { get; }
-
-		protected virtual string ShaderName => "Decal/Normal";
+		protected abstract string ShaderName { get; }
 
 		public override Color Color
 		{
@@ -36,17 +32,52 @@ namespace SkinnedDecals.Internal
 		protected BaseInstance(DecalInstance parent, DecalCamera camera, int rendererIndex,
 			int submeshMask = 0) : base(parent, camera)
 		{
-			var decal = Decal.Decal;
-			this.renderer = rendererIndex < 0 ? null : parent.Object.Renderers[rendererIndex];
+			renderer = rendererIndex < 0 ? null : parent.Object.Renderers[rendererIndex];
 			this.submeshMask = submeshMask;
-			// ReSharper disable once VirtualMemberCallInContructor
-			cmd = new CommandBuffer {name = $"{CommandName} ({renderer?.name}, {decal.name})"};
-			// ReSharper disable once VirtualMemberCallInContructor
-			material = new Material(Shader.Find(ShaderName));
-			material.mainTexture = decal.Albedo;
-			material.SetTextureKeyword("_BumpMap", "_NORMALMAP", decal.Normal);
-			material.SetTextureKeyword("_MetallicGlossMap", "_METALLICGLOSSMAP", decal.Roughness);
+			material = new Material(Shader.Find(ShaderName)) {mainTexture = Decal.Albedo};
+			material.SetTextureKeyword("_BumpMap", "_NORMALMAP", Decal.Normal);
+			material.SetTextureKeyword("_MetallicGlossMap", "_METALLICGLOSSMAP", Decal.Roughness);
+			material.SetTextureKeyword("_ParallaxMap", "_PARALLAXMAP", Decal.Height);
+			material.SetTextureKeyword("_EmissionMap", "_EMISSION", Decal.Emission);
 			sharedMaterials = renderer?.sharedMaterials;
+		}
+
+		public override void Dispose()
+		{
+			UnityEngine.Object.Destroy(material);
+			if (materials == null) return;
+			foreach(var m in materials)
+				UnityEngine.Object.Destroy(m);
+		}
+	}
+
+	public abstract class CommandInstance : BaseInstance
+	{
+		protected readonly CommandBuffer cmd;
+
+		protected abstract RenderingPath RenderingPath { get; }
+
+		protected abstract CameraEvent CameraEvent { get; }
+
+		protected abstract string CommandName { get; }
+
+		protected CommandInstance(DecalInstance parent, DecalCamera camera, int rendererIndex,
+			int submeshMask = 0) : base(parent, camera, rendererIndex, submeshMask)
+		{
+			cmd = new CommandBuffer {name = $"{CommandName} ({renderer?.name}, {Decal.name})"};
+			switch (RenderingPath)
+			{
+				case RenderingPath.DeferredShading:
+					material.DisableKeyword("_FORWARD");
+					material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+					material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
+					break;
+				case RenderingPath.Forward:
+					material.EnableKeyword("_FORWARD");
+					material.SetInt("_SrcBlend", (int)BlendMode.DstColor);
+					material.SetInt("_DstBlend", (int)BlendMode.Zero);
+					break;
+			}
 		}
 
 		protected override void Enable()
@@ -62,58 +93,110 @@ namespace SkinnedDecals.Internal
 		public override void Dispose()
 		{
 			cmd.Dispose();
-			UnityEngine.Object.Destroy(material);
-			if (materials == null) return;
-			foreach(var m in materials)
-				UnityEngine.Object.Destroy(m);
+			base.Dispose();
 		}
 	}
 
 	public class RenderObjectInstance : BaseInstance
 	{
-		protected override string ShaderName => "Standard";
+		protected override string ShaderName => "Decal/Renderer";
 
-		protected override CameraEvent CameraEvent => CameraEvent.AfterEverything;
-		protected override string CommandName => "";
+		private readonly Renderer decalRenderer;
 
 		public RenderObjectInstance(DecalInstance parent, DecalCamera camera, int rendererIndex,
 			int submeshMask = 0) : base(parent, camera, rendererIndex, submeshMask)
 		{
-			// TODO
+			var smr = renderer as SkinnedMeshRenderer;
+			var mesh = smr != null ? smr.sharedMesh : renderer.GetComponent<MeshFilter>().sharedMesh;
+			var newMesh = MeshUtility.GetMesh(mesh, parent, rendererIndex, submeshMask);
+			var newGo = new GameObject("Decal");
+			newGo.transform.parent = renderer.transform;
+			newGo.transform.localPosition = Vector3.zero;
+			newGo.transform.localRotation = Quaternion.identity;
+			if (smr != null)
+			{
+				var newSmr = newGo.AddComponent<SkinnedMeshRenderer>();
+				newSmr.sharedMesh = newMesh;
+				newSmr.bones = smr.bones;
+				newSmr.rootBone = smr.rootBone;
+				decalRenderer = newSmr;
+			}
+			else
+			{
+				newGo.AddComponent<MeshFilter>().sharedMesh = newMesh;
+				decalRenderer = newGo.AddComponent<MeshRenderer>();
+			}
+			decalRenderer.enabled = false;
+			material.SetOverrideTag("RenderType", "Transparent");
+			material.SetInt("_SrcBlend", 5);
+			material.SetInt("_DstBlend", 10);
+			material.SetInt("_ZWrite", 0);
+			material.DisableKeyword("_ALPHATEST_ON");
+			material.EnableKeyword("_ALPHABLEND_ON");
+			material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+			material.renderQueue = 3000;
+			decalRenderer.material = material;
+		}
+
+		protected override void Enable()
+		{
+			decalRenderer.enabled = true;
+		}
+
+		protected override void Disable()
+		{
+			decalRenderer.enabled = false;
 		}
 	}
 
-	public class ScreenSpaceInstance : BaseInstance
+	public class ScreenSpaceInstance : CommandInstance
 	{
-		protected override CameraEvent CameraEvent => CameraEvent.AfterForwardOpaque;
+		protected override RenderingPath RenderingPath => RenderingPath.UsePlayerSettings;
+
+		protected override CameraEvent CameraEvent => CameraEvent.AfterGBuffer;
 
 		protected override string CommandName => "Screen space decal";
 
 		protected override string ShaderName => "Decal/ScreenSpace";
 
-		public ScreenSpaceInstance(DecalInstance parent, DecalCamera camera,
-			Mesh cubeMesh) : base(parent, camera, -1)
+		private readonly Matrix4x4 matrix;
+
+		public ScreenSpaceInstance(DecalInstance parent, DecalCamera camera) : base(parent, camera, -1)
 		{
 			camera.Camera.depthTextureMode = DepthTextureMode.Depth;
-			var matrix = Decal.ObjectToProjector.inverse * parent.Object.transform.localToWorldMatrix;
-			cmd.DrawMesh(cubeMesh, matrix, material);
+			matrix = parent.Object.transform.localToWorldMatrix * parent.ObjectToProjector.inverse;
+			cmd.DrawMesh(DecalManager.Current.CubeMesh, matrix, material);
+		}
+
+		public override void OnPreRender()
+		{
+			var w = Camera.transform.position;
+			var localCameraPos = matrix.inverse*new Vector4(w.x, w.y, w.z, 1);
+			material.SetVector("_LocalCameraPos", localCameraPos);
+			if(materials != null)
+				foreach(var m in materials)
+					m.SetVector("_LocalCameraPos", localCameraPos);
 		}
 	}
 
-	public abstract class StaticInstance : BaseInstance
+	public abstract class StaticInstance : CommandInstance
 	{
+		protected override string ShaderName => "Decal/Static";
+
 		protected override string CommandName => "Static decal";
 
 		protected StaticInstance(DecalInstance parent, DecalCamera camera, int rendererIndex,
 			int submeshMask = 0) : base(parent, camera, rendererIndex, submeshMask)
 		{
-			material.SetMatrix("_ObjectToProjector",
-				parent.Decal.GetProjectionMatrix(parent.Object.Renderers.IndexOf(renderer)));
+			material.SetMatrix("_Object2Projector",
+				parent.GetProjectionMatrix(parent.Object.Renderers.IndexOf(renderer)));
 		}
 	}
 
 	public class DeferredStaticInstance : StaticInstance
 	{
+		protected override RenderingPath RenderingPath => RenderingPath.DeferredShading;
+
 		protected override CameraEvent CameraEvent => CameraEvent.AfterGBuffer;
 
 		public DeferredStaticInstance(DecalInstance parent, DecalCamera camera, int rendererIndex,
@@ -130,6 +213,8 @@ namespace SkinnedDecals.Internal
 
 	public class ForwardStaticInstance : StaticInstance
 	{
+		protected override RenderingPath RenderingPath => RenderingPath.Forward;
+
 		protected override CameraEvent CameraEvent => CameraEvent.AfterForwardOpaque;
 
 		public ForwardStaticInstance(DecalInstance parent, DecalCamera camera, int rendererIndex, 
@@ -158,7 +243,7 @@ namespace SkinnedDecals.Internal
 		}
 	}
 
-	public abstract class SkinnedInstance : BaseInstance
+	public abstract class SkinnedInstance : CommandInstance
 	{
 		private struct SkinnedData
 		{
@@ -179,7 +264,7 @@ namespace SkinnedDecals.Internal
 			}
 			catch (IndexOutOfRangeException)
 			{
-				// No triangles intersect projection box
+				Debug.LogWarning("No triangles intersect projection box");
 				return null;
 			}
 			var maxUv = uvData.Length;
@@ -231,13 +316,15 @@ namespace SkinnedDecals.Internal
 			var mat = UnityEngine.Object.Instantiate(baseMaterial);
 			mat.SetBuffer("_UvBuffer1", buffer1);
 			mat.SetBuffer("_UvBuffer2", buffer2);
-			mat.SetInt("_Buffer1Offset", minUv);
-			mat.SetInt("_Buffer2Offset", data2Offset);
+			mat.SetInt("_BufferOffset1", minUv);
+			mat.SetInt("_BufferOffset2", data2Offset);
 
 			skinnedData = new SkinnedData { buffer1 = buffer1, buffer2 = buffer2 };
 			return mat;
 		}
-		
+
+		protected override string ShaderName => "Decal/Skinned";
+
 		protected override string CommandName => "Skinned decal";
 
 		private static readonly Dictionary<Material, SkinnedData> skinnedData
@@ -250,8 +337,6 @@ namespace SkinnedDecals.Internal
 
 		protected void ProjectSkinned(SkinnedMeshRenderer renderer, int index)
 		{
-			var uvData = Decal.GetUvData(index);
-
 			var matList = new List<Material>();
 			var count = renderer.sharedMesh.subMeshCount;
 			for (int i = 0; i < count; i++)
@@ -260,10 +345,14 @@ namespace SkinnedDecals.Internal
 					continue;
 				Profiler.BeginSample("Submesh " + i);
 				SkinnedData data;
-				var mat = CreateSkinnedData(Decal.GetUvData(index), material, out data);
-				mat = ModifySubmeshMaterial(mat, i);
-				matList.Add(mat);
-				cmd.DrawRenderer(renderer, mat, i);
+				var mat = CreateSkinnedData(Parent.GetUvData(index), material, out data);
+				if (mat != null)
+				{
+					mat = ModifySubmeshMaterial(mat, i);
+					skinnedData.Add(mat, data);
+					matList.Add(mat);
+					cmd.DrawRenderer(renderer, mat, i);
+				}
 				Profiler.EndSample();
 			}
 			if (matList.Count == 1)
@@ -299,6 +388,8 @@ namespace SkinnedDecals.Internal
 
 	public class DeferredSkinnedInstance : SkinnedInstance
 	{
+		protected override RenderingPath RenderingPath => RenderingPath.DeferredShading;
+
 		protected override CameraEvent CameraEvent => CameraEvent.AfterGBuffer;
 
 		public DeferredSkinnedInstance(DecalInstance parent, DecalCamera camera,
@@ -309,10 +400,13 @@ namespace SkinnedDecals.Internal
 
 	public class ForwardSkinnedInstance : SkinnedInstance
 	{
+		protected override RenderingPath RenderingPath => RenderingPath.Forward;
+
 		protected override CameraEvent CameraEvent => CameraEvent.AfterForwardOpaque;
 		
 		protected override Material ModifySubmeshMaterial(Material baseMaterial, int submesh)
 		{
+			
 			baseMaterial.SetTexture("_BodyAlbedo", sharedMaterials[submesh].mainTexture);
 			return baseMaterial;
 		}

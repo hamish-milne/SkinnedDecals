@@ -12,6 +12,6 @@ namespace SkinnedDecals
 	{
 		public virtual int Order => 0;
 
-		public abstract DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, Renderer renderer);
+		public abstract DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, int rendererIndex);
 	}
 }

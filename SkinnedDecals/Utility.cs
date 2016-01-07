@@ -16,22 +16,6 @@ namespace SkinnedDecals
 				material.DisableKeyword(keyword);
 		}
 
-		public static Mesh GetMesh(this Renderer renderer)
-		{
-			if (renderer is MeshRenderer)
-			{
-				return renderer.GetComponent<MeshFilter>()?.sharedMesh;
-			}
-			var smr = renderer as SkinnedMeshRenderer;
-			if (smr != null)
-			{
-				var mesh = new Mesh();
-				smr.BakeMesh(mesh);
-				return mesh;
-			}
-			return null;
-		}
-
 		public static T GetOrAdd<T>(this Component obj) where T : Component
 		{
 			var ret = obj.GetComponent<T>();

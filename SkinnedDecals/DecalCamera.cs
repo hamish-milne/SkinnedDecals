@@ -18,7 +18,6 @@ namespace SkinnedDecals
 		public virtual bool IsDeferred => Camera.actualRenderingPath == RenderingPath.DeferredShading;
 
 		private readonly HashSet<DecalObject> renderSet = new HashSet<DecalObject>();
-		private readonly List<DecalObject> renderList = new List<DecalObject>();
 
 		public List<DecalCameraInstance> Instances { get; } = new List<DecalCameraInstance>();
 
@@ -32,7 +31,11 @@ namespace SkinnedDecals
 			// ReSharper disable once LoopCanBePartlyConvertedToQuery
 			foreach(var obj in Instances)
 				if (obj != null)
-					obj.ActiveSelf = renderSet.Contains(obj.Object);
+				{
+					if(!obj.Object.AllowScreenSpace)
+						obj.ActiveSelf = renderSet.Contains(obj.Object);
+					obj.OnPreRender();
+				}
 
 			PreRender?.Invoke(this);
 		}
@@ -40,7 +43,6 @@ namespace SkinnedDecals
 		protected virtual void OnPostRender()
 		{
 			renderSet.Clear();
-			renderList.Clear();
 
 			PostRender?.Invoke(this);
 		}
@@ -61,8 +63,7 @@ namespace SkinnedDecals
 		{
 			if(obj == null)
 				throw new ArgumentNullException(nameof(obj));
-			if(renderSet.Add(obj))
-				renderList.Add(obj);
+			renderSet.Add(obj);
 		}
 	}
 }

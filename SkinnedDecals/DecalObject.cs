@@ -10,23 +10,22 @@ namespace SkinnedDecals
 		SkinnedRenderersOnly,
 		All,
 	}
-	
-	public class DecalObject : MonoBehaviour
+
+	public abstract class DecalObject : MonoBehaviour
 	{
-		[SerializeField, Tooltip("Enable this for ground objects and flat scenery")]
-		protected bool allowScreenSpace;
-		
-		[SerializeField, Tooltip("When to use skinned decals")]
-		protected SkinMode skinMode;
-
 		[SerializeField, Tooltip("Increase this for larger objects. Set negative for no limit")]
-		protected int maxDecalCount = 1;
+		protected int maxDecalCount = 8;
 
-		[SerializeField,
-			Tooltip("The renderers on which decals will be drawn. Does not apply to screen space decals")]
-		protected List<Renderer> renderers = new List<Renderer>();
+		[Serializable]
+		protected class DecalList : SortedList<DecalInstance>
+		{
+			public DecalList() : base((x, y) => x.Priority.CompareTo(y?.Priority ?? 0))
+			{
+			}
+		}
 
-		protected readonly SortedList<DecalInstance> instances = new SortedList<DecalInstance>();
+		[SerializeField]
+		protected DecalList instances = new DecalList();
 		
 		private static readonly List<DecalObject> active = new List<DecalObject>();
 		
@@ -37,15 +36,13 @@ namespace SkinnedDecals
 			Active = active.AsReadOnly();
 		}
 
-		public bool AllowScreenSpace => allowScreenSpace;
+		public virtual bool AllowScreenSpace => false;
 
-		public SkinMode SkinMode => skinMode;
+		public virtual SkinMode SkinMode => SkinMode.None;
 
-		public virtual bool AlwaysDraw => !HasRenderers;
-		
-		public virtual bool HasRenderers => renderers.Count > 0;
-		
-		public List<Renderer> Renderers => renderers;
+		public virtual List<Renderer> Renderers => null;
+
+		public virtual Bounds Bounds => default(Bounds);
 
 		public virtual void AddDecal(DecalInstance decal)
 		{
@@ -88,9 +85,51 @@ namespace SkinnedDecals
 				obj.Reload();
 		}
 
+		protected virtual void OnEnable()
+		{
+			active.Add(this);
+		}
+
+		protected virtual void OnDisable()
+		{
+			while(active.Contains(this))
+				active.Remove(this);
+		}
+
+		protected virtual void OnDestroy()
+		{
+			foreach (var obj in instances)
+			{
+				obj?.Dispose();
+			}
+		}
+	}
+
+	public class DecalObjectRendered : DecalObject
+	{
+		[SerializeField,
+			Tooltip("The renderers on which decals will be drawn")]
+		protected List<Renderer> renderers = new List<Renderer>();
+
+		[SerializeField, Tooltip("When to use skinned decals")]
+		protected SkinMode skinMode = SkinMode.SkinnedRenderersOnly;
+
+		public override List<Renderer> Renderers => renderers;
+
+		public override SkinMode SkinMode => skinMode;
+
 		protected virtual void OnWillRenderObject()
 		{
-			DecalManager.Current.GetDecalCamera(Camera.current)?.Render(this);
+			DecalManager.Current.GetDecalCamera(Camera.current).Render(this);
 		}
+	}
+
+	public class DecalObjectScreenSpace : DecalObject
+	{
+		[SerializeField] protected Bounds bounds;
+
+		public override Bounds Bounds => bounds;
+
+		public override bool AllowScreenSpace => true;
 	}
 }

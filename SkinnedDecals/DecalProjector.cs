@@ -13,6 +13,7 @@ namespace SkinnedDecals
 	public class DecalProjector : MonoBehaviour
 	{
 		[SerializeField] protected DecalTextureSet decal;
+		[SerializeField] protected Color color;
 		[SerializeField] protected int priority;
 		[SerializeField] protected ListMode materialListMode, objectListMode;
 		[SerializeField] protected List<Material> materialList = new List<Material>();
@@ -29,83 +30,120 @@ namespace SkinnedDecals
 			get { return priority; }
 			set { priority = value; }
 		}
-		
+
+		private Mesh skinMesh;
+
 		public List<Material> MaterialList => materialList;
 
-		public DecalData Project(DecalObject obj)
+		private Mesh GetMesh(Renderer renderer)
 		{
-			var thisBounds = new Bounds(transform.position, transform.lossyScale);
-			var renderers = new Renderer[obj.Renderers.Count];
-			bool isValid = false;
-			for(int i = 0; i < renderers.Length; i++)
+			if (renderer is MeshRenderer)
 			{
-				var r = obj.Renderers[i];
-				if(r != null && r.bounds.Intersects(thisBounds))
-				{
-					renderers[i] = r;
-					isValid = true;
-				}
+				return renderer.GetComponent<MeshFilter>()?.sharedMesh;
 			}
+			var smr = renderer as SkinnedMeshRenderer;
+			if (smr != null)
+			{
+				if(skinMesh == null)
+					skinMesh = new Mesh();
+				else
+					skinMesh.Clear();
+				smr.BakeMesh(skinMesh);
+				return skinMesh;
+			}
+			return null;
+		}
+
+		public DecalInstance Project(DecalObject obj)
+		{
+			Profiler.BeginSample("Decal projection");
+			var thisBounds = new Bounds(transform.position, transform.lossyScale);
+			var renderers = obj.Renderers == null ? null : new Renderer[obj.Renderers.Count];
+			bool isValid = obj.AllowScreenSpace;
+			if(renderers != null)
+				for(int i = 0; i < renderers.Length; i++)
+				{
+					var r = obj.Renderers[i];
+					if(r != null && r.bounds.Intersects(thisBounds))
+					{
+						renderers[i] = r;
+						isValid = true;
+					}
+				}
 			if(!isValid)
 				return null;
-			var data = ScriptableObject.CreateInstance<DecalData>();
-			data.Decal = Decal;
-			data.ObjectToProjector = obj.transform.localToWorldMatrix * transform.localToWorldMatrix;
-			for(int i = 0; i < renderers.Length; i++)
+			var data = new DecalInstance(Priority, Decal, obj)
 			{
-				var r = renderers[i];
-				if (r == null)
-					continue;
-				var projector = r.transform.localToWorldMatrix * transform.worldToLocalMatrix;
-				data.SetProjectionMatrix(i, projector);
-				if(obj.SkinMode == SkinMode.All ||
-					(obj.SkinMode == SkinMode.SkinnedRenderersOnly && r is SkinnedMeshRenderer))
+				Color = color,
+				ActiveSelf = true,
+				ObjectToProjector = transform.worldToLocalMatrix * obj.transform.localToWorldMatrix,
+			};
+			if (renderers != null)
+			{
+				for (int i = 0; i < renderers.Length; i++)
 				{
-					var mesh = r.GetMesh();
+					var r = renderers[i];
+					if (r == null)
+						continue;
+					var projector = transform.worldToLocalMatrix * r.transform.localToWorldMatrix;
+					data.SetProjectionMatrix(i, projector);
+					if (obj.SkinMode != SkinMode.All &&
+						(obj.SkinMode != SkinMode.SkinnedRenderersOnly || !(r is SkinnedMeshRenderer)))
+						continue;
+					Profiler.BeginSample("Baking mesh");
+					var mesh = GetMesh(r);
+					Profiler.EndSample();
+					Profiler.BeginSample("Transforming vertices");
 					var verts = mesh.vertices;
-					var uvData = new Vector3[verts.Length];
-					int[] tris;
-					if(materialListMode == ListMode.None)
+					ProjectionUtility.TransformVerts(verts, r.transform, transform);
+					var uvData = new Vector3[mesh.vertexCount];
+					Profiler.EndSample();
+					Profiler.BeginSample("Intersecting triangles");
+					if (materialListMode == ListMode.None)
 					{
-						tris = mesh.triangles;
-						ProjectionUtility.BakeUvData(tris, verts, projector, uvData);
-					} else
+						ProjectionUtility.Project(mesh.triangles, verts, uvData);
+					}
+					else
 					{
 						var mats = r.sharedMaterials;
-						bool first = true;
+						var first = true;
 						isValid = false;
-						for(int j = 0; j < mats.Length; j++)
+						for (int j = 0; j < mats.Length; j++)
 						{
 							var m = mats[j];
-							if(!materialList.CheckList(m, materialListMode))
+							if (!materialList.CheckList(m, materialListMode))
 								continue;
-							ProjectionUtility.BakeUvData(mesh.GetTriangles(j), verts,
-								projector, uvData, first);
+							ProjectionUtility.Project(mesh.GetTriangles(j), verts, uvData, first);
 							isValid = true;
 							first = false;
 						}
-						if(!isValid)
-							continue;
-						data.SetUvData(i, uvData);
 					}
+					Profiler.EndSample();
+					if (!isValid)
+						continue;
+					data.SetUvData(i, uvData);
 				}
 			}
+			Profiler.EndSample();
+			obj.AddDecal(data);
+			Profiler.BeginSample("Creating camera instances");
+			data.Reload();
+			Profiler.EndSample();
 			return data;
 		}
 
 		public void Project()
 		{
-			foreach(var obj in DecalObject.Active)
+			// ReSharper disable once ForCanBeConvertedToForeach
+			for (int i = 0; i < DecalObject.Active.Count; i++)
 			{
-				if(!objectList.CheckList(obj, objectListMode))
+				var obj = DecalObject.Active[i];
+				if (!objectList.CheckList(obj, objectListMode))
 					continue;
-				var newData = Project(obj);
-				if(newData == null)
-					continue;
-				var instance = new DecalInstance(Priority, newData, obj);
-				instance.Reload();
-				obj.AddDecal(instance);
+				if(obj.Renderers != null || new Bounds(transform.position, transform.lossyScale).Intersects(obj.Bounds))
+					Project(obj);
 			}
+			//System.GC.Collect(0);
 		}
 
 		protected virtual void OnDrawGizmosSelected()
