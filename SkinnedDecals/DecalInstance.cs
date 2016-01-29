@@ -29,8 +29,6 @@ namespace SkinnedDecals
 		protected abstract void Disable();
 
 		public abstract void Dispose();
-
-		public abstract Color Color { get; set; }
 		
 		public abstract DecalTextureSet Decal { get; }
 
@@ -78,6 +76,10 @@ namespace SkinnedDecals
 		}
 
 		public virtual void OnPreRender() { }
+
+		public virtual void OnPostRender() { }
+
+		public virtual void Update() { }
 	}
 
 	[Serializable]
@@ -87,7 +89,7 @@ namespace SkinnedDecals
 		protected class RendererData
 		{
 			public Matrix4x4 objectToProjector;
-			public Vector3[] uvData;
+			public Vector2[] uvData;
 		}
 
 		[SerializeField]
@@ -131,12 +133,12 @@ namespace SkinnedDecals
 			GetData(index, true).objectToProjector = matrix;
 		}
 
-		public virtual Vector3[] GetUvData(int index)
+		public virtual Vector2[] GetUvData(int index)
 		{
 			return GetData(index)?.uvData;
 		}
 
-		public virtual void SetUvData(int index, Vector3[] uvData)
+		public virtual void SetUvData(int index, Vector2[] uvData)
 		{
 			GetData(index, true).uvData = uvData;
 		}
@@ -202,7 +204,6 @@ namespace SkinnedDecals
 			{
 				foreach(var obj in DecalManager.Current.CreateDecal(this, camera))
 				{
-					obj.Color = Color;
 					instances.Add(obj);
 					camera.Instances.Add(obj);
 				}
@@ -251,19 +252,6 @@ namespace SkinnedDecals
 			for (int i = 0; i < DecalCamera.ActiveCameras.Count; i++)
 			{
 				CameraAddRemove(DecalCamera.ActiveCameras[i], true);
-			}
-		}
-
-		protected Color color;
-
-		public override Color Color
-		{
-			get { return color; }
-			set
-			{
-				color = value;
-				foreach (var o in instances)
-					o.Color = value;
 			}
 		}
 	}

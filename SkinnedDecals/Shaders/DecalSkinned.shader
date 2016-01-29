@@ -17,57 +17,34 @@
 
 		_EmissionColor("Color", Color) = (0,0,0)
 		_EmissionMap("Emission", 2D) = "white" {}
-
-		// Blending state
-		[HideInInspector] _SrcBlend("__src", Float) = 1.0
-		[HideInInspector] _DstBlend("__dst", Float) = 0.0
 	}
 
 	SubShader
 	{
-		Tags { "DecalMode" = "Skinned" }
-		Pass
+		Tags
 		{
-			ZWrite Off
-			Offset -1, -1
-			Blend [_SrcBlend] [_DstBlend]
-		
-			CGPROGRAM
-			#pragma multi_compile_fog
-			#pragma multi_compile _ _FORWARD
-			#pragma multi_compile _ _NORMALMAP
-			#pragma multi_compile _ _METALLICGLOSSMAP
-			#pragma multi_compile _ _PARALLAXMAP
-			#pragma multi_compile _ _EMISSION
-			#define _SKINNED
-			#pragma vertex vert
-			#pragma fragment frag
-			#include "SkinnedDecals.cginc"
-			ENDCG
+			"IgnoreProjector" = "True"
+			"ForceNoShadowCasting" = "True"
 		}
-	}
 
-	SubShader
-	{
-		Tags{ "DecalMode" = "Static" }
-		Pass
-		{
-			ZWrite Off
-			Offset -1, -1
-			Blend [_SrcBlend] [_DstBlend]
-		
-			CGPROGRAM
-			#pragma multi_compile_fog
-			#pragma multi_compile _ _FORWARD
-			#pragma multi_compile _ _NORMALMAP
-			#pragma multi_compile _ _METALLICGLOSSMAP
-			#pragma multi_compile _ _PARALLAXMAP
-			#pragma multi_compile _ _EMISSION
-			#undef _SKINNED
-			#pragma vertex vert
-			#pragma fragment frag
-			#include "SkinnedDecals.cginc"
-			ENDCG
-		}
+		ZWrite Off
+		Offset -1,-1
+		Blend SrcAlpha OneMinusSrcAlpha
+
+        CGPROGRAM
+		#pragma exclude_renderers d3d9 opengl gles d3d11_9x metal xbox360 ps3
+		#pragma multi_compile _ _NORMALMAP _PARALLAXMAP
+		#pragma multi_compile _ _EMISSION
+		#define _SKINNED
+        #pragma surface surf Standard nometa exclude_path:prepass vertex:vert finalgbuffer:FinalGBuffer keepalpha nolightmap
+		// Reduce the shader variant count by cutting uncommon use cases
+		#ifdef _PARALLAXMAP
+		#define _NORMALMAP
+		#endif
+		#ifdef _NORMALMAP
+		#define _METALLICGLOSSMAP
+		#endif
+		#include "DecalSurface.cginc"
+        ENDCG
 	}
 }

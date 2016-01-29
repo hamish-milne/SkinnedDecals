@@ -31,13 +31,16 @@
   <ItemGroup>
     <Compile Include="DecalCamera.cs" />
     <Compile Include="DecalInstance.cs" />
+    <Compile Include="DecalInstanceManager.cs" />
     <Compile Include="DecalManager.cs" />
     <Compile Include="DecalMode.cs" />
     <Compile Include="DecalObject.cs" />
     <Compile Include="DecalProjector.cs" />
     <Compile Include="DecalTextureSet.cs" />
+    <Compile Include="Internal\BufferInstanceManager.cs" />
     <Compile Include="Internal\Instances.cs" />
     <Compile Include="Internal\Modes.cs" />
+    <Compile Include="Internal\NewModes.cs" />
     <Compile Include="MeshUtility.cs" />
     <Compile Include="ProjectionUtility.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -45,19 +48,14 @@
     <Compile Include="Utility.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shaders\DecalSkinned.shader">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Shaders\DecalRenderer.shader">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Shaders\DecalScreenSpace.shader">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <None Include="Shaders\DecalSkinned.shader" />
+    <None Include="Shaders\DecalRenderer.shader" />
+    <None Include="Shaders\DecalScreenSpace.shader" />
+    <None Include="Shaders\DecalStandard.shader" />
     <None Include="Shaders\DecalStatic.shader" />
-    <None Include="Shaders\SkinnedDecals.cginc">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <None Include="Shaders\DecalSurface.cginc" />
+    <None Include="Shaders\DecalTest.shader" />
+    <None Include="Shaders\SkinnedDecals.cginc" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

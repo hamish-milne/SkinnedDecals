@@ -74,7 +74,6 @@ namespace SkinnedDecals
 				return null;
 			var data = new DecalInstance(Priority, Decal, obj)
 			{
-				Color = color,
 				ActiveSelf = true,
 				ObjectToProjector = transform.worldToLocalMatrix * obj.transform.localToWorldMatrix,
 			};
@@ -96,7 +95,7 @@ namespace SkinnedDecals
 					Profiler.BeginSample("Transforming vertices");
 					var verts = mesh.vertices;
 					ProjectionUtility.TransformVerts(verts, r.transform, transform);
-					var uvData = new Vector3[mesh.vertexCount];
+					var uvData = new Vector2[mesh.vertexCount];
 					Profiler.EndSample();
 					Profiler.BeginSample("Intersecting triangles");
 					if (materialListMode == ListMode.None)

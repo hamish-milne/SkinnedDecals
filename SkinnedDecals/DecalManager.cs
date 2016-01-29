@@ -41,7 +41,7 @@ namespace SkinnedDecals
 				.Where(t => Attribute.IsDefined(t, typeof(DecalModeAttribute)))
 				.Select(t => (DecalMode)Activator.CreateInstance(t))
 				.ToArray();
-			Array.Sort(list, (a, b) => a.Order.CompareTo(b.Order));
+			Array.Sort(list, (a, b) => b.Order.CompareTo(b.Order));
 			modes = list;
 		}
 

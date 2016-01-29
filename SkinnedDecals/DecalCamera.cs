@@ -42,6 +42,12 @@ namespace SkinnedDecals
 
 		protected virtual void OnPostRender()
 		{
+			foreach (var obj in Instances)
+			{
+				obj?.OnPostRender();
+			}
+
+
 			renderSet.Clear();
 
 			PostRender?.Invoke(this);
@@ -57,6 +63,14 @@ namespace SkinnedDecals
 		{
 			activeCameras.Remove(this);
 			AddRemove?.Invoke(this, false);
+		}
+
+		protected virtual void Update()
+		{
+			foreach (var obj in Instances)
+			{
+				obj?.Update();
+			}
 		}
 
 		public void Render(DecalObject obj)

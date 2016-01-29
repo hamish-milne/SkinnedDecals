@@ -24,7 +24,7 @@ namespace SkinnedDecals.Internal
 
 		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, int rendererIndex)
 		{
-			if (!camera.IsDeferred || rendererIndex >= 0 || !parent.Object.AllowScreenSpace)
+			if (rendererIndex >= 0 || !parent.Object.AllowScreenSpace)
 				return null;
 			return new ScreenSpaceInstance(parent, camera);
 		}
@@ -53,14 +53,15 @@ namespace SkinnedDecals.Internal
 		{
 			if (!camera.IsDeferred || rendererIndex < 0)
 				return null;
-			return new DeferredSkinnedInstance(parent, camera, rendererIndex);
+			Debug.Log("Mode");
+			return new UvSkinnedInstance(parent, camera, rendererIndex);
 		}
 	}
 
 	[DecalMode]
 	public class RenderObjectMode : DecalMode
 	{
-		public override int Order => 0;
+		public override int Order => -10;
 
 		public override DecalCameraInstance Create(DecalInstance parent, DecalCamera camera, int rendererIndex)
 		{

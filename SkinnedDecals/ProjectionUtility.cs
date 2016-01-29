@@ -21,14 +21,12 @@ namespace SkinnedDecals
 				verts[i] = projector.InverseTransformPoint(obj.TransformPoint(verts[i]));
 		}
 
-		public static void Project(int[] tris, Vector3[] verts, Vector3[] uvData, bool dontClear = false)
+		public static void Project(int[] tris, Vector3[] verts, Vector2[] uvData, bool dontClear = false)
 		{
 			if (!dontClear)
 			{
 				for (int i = 0; i < uvData.Length; i++)
-					// 10 is an arbitrary value such that x>1 or x<-1
-					// -1 is an arbitrary negative value
-					uvData[i] = new Vector3(10, 10, -1);
+					uvData[i] = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
 			}
 
 			for (int i = 0; i < tris.Length; i += 3)
@@ -62,9 +60,9 @@ namespace SkinnedDecals
 					continue;
 
 				// Compute the UV data at each vertex
-				uvData[t1] = new Vector3(v1.x + 0.5f, v1.y + 0.5f, 1);
-				uvData[t2] = new Vector3(v2.x + 0.5f, v2.y + 0.5f, 1);
-				uvData[t3] = new Vector3(v3.x + 0.5f, v3.y + 0.5f, 1);
+				uvData[t1] = ((Vector2) v1) + new Vector2(0.5f, 0.5f);
+				uvData[t2] = ((Vector2) v2) + new Vector2(0.5f, 0.5f);
+				uvData[t3] = ((Vector2) v3) + new Vector2(0.5f, 0.5f);
 			}
 		}
 	}

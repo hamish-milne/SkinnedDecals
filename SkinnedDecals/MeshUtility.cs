@@ -18,7 +18,7 @@ namespace SkinnedDecals
 
 			var uvData = data.GetUvData(index);
 			var verts = mesh.vertices;
-			var newVerts = new List<Vector3>(uvData.Count(uv => uv.z > 0));
+			var newVerts = new List<Vector3>(uvData.Count(uv => !float.IsInfinity(uv.x)));
 			var vertMap = new int[verts.Length];
 			var newTris = new List<int>(newVerts.Count * 2);
 
@@ -122,12 +122,14 @@ namespace SkinnedDecals
 			return ret;
 		}
 		
-		static void ProcessTriangles(Vector3[] uvData, int[] tris, Vector3[] verts, List<int> newTris,
+		static void ProcessTriangles(Vector2[] uvData, int[] tris, Vector3[] verts, List<int> newTris,
 			List<Vector3> newVerts, int[] vertMap)
 		{
 			for(int i = 0; i < tris.Length; i += 3)
 			{
-				if(uvData[tris[i]].z < 0 || uvData[tris[i+1]].z < 0 || uvData[tris[i+1]].z < 0)
+				if( float.IsInfinity(uvData[tris[i]].x) ||
+					float.IsInfinity(uvData[tris[i + 1]].x) ||
+					float.IsInfinity(uvData[tris[i + 2]].x))
 					continue;
 				for(int j = 0; j < 3; j++)
 				{
