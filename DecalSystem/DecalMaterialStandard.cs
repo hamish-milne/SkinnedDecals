@@ -10,23 +10,25 @@ namespace DecalSystem
 	[CreateAssetMenu]
 	public class DecalMaterialStandard : DecalMaterial
 	{
+		private static Shader sm4Shader, baseShader;
+
 		/// <summary>
 		/// Draws skinned decals using a <c>ComputeBuffer</c>
 		/// </summary>
-		public static Shader Sm4Shader { get; private set; }
+		public static Shader Sm4Shader => sm4Shader ?? (sm4Shader = Shader.Find("Decal/SM4"));
 
 		/// <summary>
 		/// Draws most decal types
 		/// </summary>
-		public static Shader BaseShader { get; private set; }
-
+		public static Shader BaseShader => baseShader ?? (baseShader = Shader.Find("Decal/Standard"));
+		
 		/// <summary>
 		/// Whether the <c>Sm4Shader</c> is included and supported
 		/// </summary>
 		public static bool Sm4Supported => Sm4Shader?.isSupported ?? false;
 
 		[SerializeField, MaterialProperty("_Color")]            protected Color color = Color.white;
-		[SerializeField, MaterialProperty("_Emission")]         protected Color emission = Color.black;
+		[SerializeField, MaterialProperty("_EmissionColor")]    protected Color emission = Color.black;
 		[SerializeField, MaterialProperty("_Glossiness")]       protected float smoothness;
 		[SerializeField, MaterialProperty("_Metallic")]         protected float metallic;
 		[SerializeField, MaterialProperty("_Parallax")]         protected float parallax;
@@ -35,19 +37,6 @@ namespace DecalSystem
 		[SerializeField, MaterialProperty("_MetallicGlossMap")] protected Texture2D roughnessMap;
 		[SerializeField, MaterialProperty("_ParallaxMap")]      protected Texture2D parallaxMap;
 		[SerializeField, MaterialProperty("_EmissionMap")]      protected Texture2D emissionMap;
-
-		private void FindShaders()
-		{
-			if (Sm4Shader == null)
-				Sm4Shader = Shader.Find("Decal/SM4");
-			if (BaseShader == null)
-				BaseShader = Shader.Find("Decal/Standard");
-		}
-
-		protected virtual void Awake()
-		{
-			FindShaders();
-		}
 
 		public override void SetKeywords(Action<string> addKeyword, Action<string> removeKeyword)
 		{
@@ -72,30 +61,32 @@ namespace DecalSystem
 
 		public override Material GetMaterial(string modeKeyword)
 		{
-			FindShaders();
-			Shader shader;
-			switch (modeKeyword)
+			var shader = GetShaderForMode(modeKeyword);
+			if (shader == null) return null;
+			var keywordList = new List<string>(4);
+			SetKeywords(keywordList.Add, s => keywordList.Remove(s));
+			keywordList.Add(modeKeyword);
+			return GetMaterial(shader, keywordList.ToArray());
+		}
+
+		public override Shader GetShaderForMode(string mode)
+		{
+			switch (mode)
 			{
 				case "_SKINNEDBUFFER":
 					if (!Sm4Supported)
 						return null;
-					shader = Sm4Shader;
-					break;
+					return Sm4Shader;
 				case "_SKINNEDUV":
 				case "_FIXEDSINGLE":
 				case "_FIXED4":
 				case "_FIXED8":
 				case "_SCREENSPACE":
 				case "":
-					shader = BaseShader;
-					break;
+					return BaseShader;
 				default:
 					return null;
 			}
-			var keywordList = new List<string>(4);
-			SetKeywords(keywordList.Add, s => keywordList.Remove(s));
-			keywordList.Add(modeKeyword);
-			return GetMaterial(shader, keywordList.ToArray());
 		}
 	}
 }

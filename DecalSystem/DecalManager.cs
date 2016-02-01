@@ -261,6 +261,7 @@ namespace DecalSystem
 		{
 			if (CheckCameras())
 			{
+				Debug.Log("Rebuilding camera data");
 				var activeObjects = DecalObject.ActiveObjects;
 				ClearData();
 				var list = new List<CameraData>();

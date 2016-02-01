@@ -182,6 +182,8 @@ namespace DecalSystem
 	/// </summary>
 	public abstract class DecalObject : MonoBehaviour
 	{
+		public abstract string[] RequiredModes { get; }
+
 		private static List<DecalObject> activeObjects;
 		private static ReadOnlyCollection<DecalObject> activeObjectsReadonly;
 
@@ -220,10 +222,25 @@ namespace DecalSystem
 		public abstract Bounds Bounds { get; }
 
 		/// <summary>
+		/// The renderer the object is attached to. Can be <c>null</c> for screen space decals.
+		/// </summary>
+		public abstract Renderer Renderer { get; }
+
+		/// <summary>
+		/// The renderer's shared materials, if any.
+		/// </summary>
+		public virtual Material[] Materials => Renderer?.sharedMaterials;
+
+		/// <summary>
 		/// The mesh drawn by the object. For geometry-based objects this is the normal shared
 		/// mesh, but for screen space objects will usually be a cube.
 		/// </summary>
 		public abstract Mesh Mesh { get; }
+
+		public virtual Mesh GetCurrentMesh()
+		{
+			return Mesh;
+		}
 
 		/// <summary>
 		/// Whether the object draws decals in screen space. Screen space decals don't care about
@@ -385,16 +402,14 @@ namespace DecalSystem
 					if (deferredData == null)
 					{
 						GetDeferredData(out meshData, out rendererData);
-						if(meshData != null || rendererData != null)
-							deferredData = new RenderPathData(meshData, rendererData, RequireDepthTexture);
+						deferredData = new RenderPathData(meshData, rendererData, RequireDepthTexture);
 					}
 					return deferredData;
 				case RenderingPath.Forward:
 					if (forwardData == null)
 					{
 						GetForwardData(out meshData, out rendererData);
-						if (meshData != null || rendererData != null)
-							forwardData = new RenderPathData(meshData, rendererData, RequireDepthTexture);
+						forwardData = new RenderPathData(meshData, rendererData, RequireDepthTexture);
 					}
 					return forwardData;
 			}

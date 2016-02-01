@@ -11,21 +11,22 @@ namespace DecalSystem
 	[RequireComponent(typeof(MeshRenderer))]
 	public class DecalFixedObject : DecalObjectBase
 	{
-		public MeshRenderer Renderer { get; private set; }
+		private static readonly string[] modes = {"_FIXEDSINGLE", "_FIXED4", "_FIXED8"};
 
-		public override Bounds Bounds => Renderer.bounds;
+		public override string[] RequiredModes => modes;
+
+		public override Renderer Renderer => MeshRenderer;
+
+		public override Bounds Bounds => MeshRenderer.bounds;
 
 		private Mesh mesh;
+		private MeshRenderer meshRenderer;
 
-		public override Mesh Mesh => mesh;
+		public override Mesh Mesh => mesh ?? (mesh = GetComponent<MeshFilter>().sharedMesh);
+
+		public MeshRenderer MeshRenderer => meshRenderer ?? (meshRenderer = GetComponent<MeshRenderer>());
 
 		public override bool ScreenSpace => false;
-
-		protected virtual void Awake()
-		{
-			Renderer = GetComponent<MeshRenderer>();
-			mesh = GetComponent<MeshFilter>().sharedMesh;
-		}
 
 		[Serializable]
 		protected class FixedChannel : DecalInstance
@@ -139,7 +140,7 @@ namespace DecalSystem
 			{
 				var data = obj.GetMeshData();
 				data.mesh = Mesh;
-				data.transform = Renderer.transform;
+				data.transform = MeshRenderer.transform;
 				return data;
 			}).ToArray();
 		}

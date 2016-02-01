@@ -2,7 +2,7 @@
 {
 	Properties
 	{
-		_Color ("Color", Color) = (1,1,1,1)
+		[HDR] _Color("Color", Color) = (1, 1, 1, 1)
 		_MainTex ("Albedo", 2D) = "white" {}	
 	
 		_Glossiness("Smoothness", Range(0.0, 1.0)) = 0.5
@@ -15,8 +15,8 @@
 		_Parallax ("Height Scale", Range (0.0005, 0.08)) = 0.02
 		_ParallaxMap ("Height Map", 2D) = "black" {}
 
-		_EmissionColor("Color", Color) = (0,0,0)
-		_EmissionMap("Emission", 2D) = "white" {}
+		[HDR] _EmissionColor("Emission color", Color) = (0,0,0)
+		_EmissionMap("Emission map", 2D) = "white" {}
 	}
 
 	SubShader
@@ -36,9 +36,9 @@
 		// Decal shader that uses SM4 features - specifically to use an arbitrary buffer of UV data to
 		// draw the decal on a skinned renderer.
 		#pragma exclude_renderers d3d9 opengl gles d3d11_9x metal xbox360 ps3
-		#pragma multi_compile _ _NORMALMAP _PARALLAXMAP
-		#pragma multi_compile _ _METALLICGLOSSMAP
-		#pragma multi_compile _ _EMISSION
+		#pragma shader_feature _ _NORMALMAP _PARALLAXMAP
+		#pragma shader_feature _ _METALLICGLOSSMAP
+		#pragma shader_feature _ _EMISSION
 		#define _SKINNEDBUFFER
 		#pragma surface surf DecalStandard nometa vertex:vert finalgbuffer:FinalGBuffer finalcolor:FinalColor keepalpha nolightmap
 

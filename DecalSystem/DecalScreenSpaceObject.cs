@@ -7,6 +7,10 @@ namespace DecalSystem
 {
 	public class DecalScreenSpaceObject : DecalObjectBase
 	{
+		private static readonly string[] modes = {"_SCREENSPACE"};
+
+		public override string[] RequiredModes => modes;
+
 		[Serializable]
 		protected class Instance : DecalInstance
 		{
@@ -32,6 +36,8 @@ namespace DecalSystem
 		public override bool ScreenSpace => true;
 
 		public override Bounds Bounds => bounds;
+
+		public override Renderer Renderer => null;
 
 		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
 		{

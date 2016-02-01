@@ -1,19 +1,26 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using UnityEditor;
+using Object = UnityEngine.Object;
 
 namespace DecalSystem.Editor
 {
 	[CustomEditor(typeof(DecalMaterial), true), CanEditMultipleObjects]
 	public class DecalMaterialEditor : UnityEditor.Editor
 	{
-		public Material[] materials;
-		public MaterialEditor materialEditor;
+		[NonSerialized] private Material[] materials;
+		[NonSerialized] private MaterialEditor materialEditor;
 
 		public override void OnInspectorGUI()
 		{
 			SetupMaterialEditor();
+			if (materialEditor == null)
+			{
+				EditorGUILayout.HelpBox("Unable to get material instances", MessageType.Error);
+				return;
+			}
 			materialEditor.serializedObject.Update();
 			if (materialEditor.PropertiesGUI())
 			{
@@ -53,7 +60,29 @@ namespace DecalSystem.Editor
 					}
 				}
 				serializedObject.ApplyModifiedProperties();
+				// Update the keywords, which might need to be changed now
+				for(int i = 0; i < targets.Length; i++)
+					((DecalMaterial)targets[i]).SetKeywords(materials[i]);
+				if(Application.isPlaying)
+					DecalObject.RefreshAll(RefreshAction.MaterialPropertiesChanged);
 			}
+		}
+
+		protected virtual void OnEnable()
+		{
+		}
+
+		protected virtual void OnDisable()
+		{
+			Clear();
+		}
+
+		protected virtual void Clear()
+		{
+			DestroyImmediate(materialEditor);
+			if(materials != null)
+				foreach (var m in materials)
+					DestroyImmediate(m);
 		}
 
 		public override bool HasPreviewGUI()
@@ -73,10 +102,18 @@ namespace DecalSystem.Editor
 			{
 				var objs = targets.Cast<DecalMaterial>().ToArray();
 				materials = objs
-					.Select(m => Instantiate(m.GetMaterial("")))
+					.Select(m => m.GetMaterial(""))
 					.ToArray();
-				for (int i = 0; i < objs.Length; i++)
-					objs[i].CopyTo(materials[i]);
+				// This can in theory happen, esp. when transitioning between play modes
+				if (materials.Any(m => m == null))
+					materials = null;
+				else
+				{
+					for (int i = 0; i < materials.Length; i++)
+						materials[i] = Instantiate(materials[i]);
+					for (int i = 0; i < objs.Length; i++)
+						objs[i].CopyTo(materials[i]);
+				}
 			}
 			if (materials != null && materialEditor == null)
 				// ReSharper disable once CoVariantArrayConversion
@@ -90,9 +127,12 @@ namespace DecalSystem.Editor
 		{
 			SetupMaterialEditor();
 			// .. but make sure the names are correct
-			for (int i = 0; i < materials.Length; i++)
-				materials[i].name = targets[i].name;
-			drawPreview.Invoke(null, new object[] {materialEditor, previewArea, materialEditor.targets});
+			if (materialEditor != null)
+			{
+				for (int i = 0; i < materials.Length; i++)
+					materials[i].name = targets[i].name;
+				drawPreview.Invoke(null, new object[] {materialEditor, previewArea, materialEditor.targets});
+			}
 		}
 
 		public override void OnPreviewSettings()

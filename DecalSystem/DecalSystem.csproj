@@ -39,7 +39,7 @@
     <Compile Include="DecalProjector.cs" />
     <Compile Include="DecalScreenSpaceObject.cs" />
     <Compile Include="DecalSkinnedObject.cs" />
-    <Compile Include="MeshUtility.cs" />
+    <Compile Include="DecalVariantCollection.cs" />
     <Compile Include="ProjectionUtility.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

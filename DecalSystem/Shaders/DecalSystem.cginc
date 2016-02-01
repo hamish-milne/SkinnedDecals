@@ -312,8 +312,12 @@ void SmoothnessVert(in appdata_full v, out Input o, out float4 position : POSITI
 void FinalGBuffer(Input IN, DecalSurfaceOutputStandard o,
 	inout half4 diffuse, inout half4 specSmoothness, inout half4 normal, inout half4 emission)
 {
+#ifdef _NORMALMAP
 	normal.xyz *= o.Alpha;
 	normal.a = o.Alpha;
+#else
+	normal = float4(0, 0, 0, 0);
+#endif
 
 	diffuse.rgb *= o.Alpha;
 	diffuse.a = o.Alpha;

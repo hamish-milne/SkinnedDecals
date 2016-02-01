@@ -153,8 +153,6 @@ namespace DecalSystem
 			else
 				Properties.Clear();
 			CopyTo(Properties);
-			if(Application.isPlaying)
-				DecalObject.RefreshAll(RefreshAction.MaterialPropertiesChanged);
 		}
 
 		/// <summary>
@@ -177,8 +175,10 @@ namespace DecalSystem
 				prop.materialAction(this, material);
 		}
 
+		// TODO: Rework material cache
+
 		/// <summary>
-		/// Returns a <c>Material</c> that can be used to render the decal
+		/// Returns a cached <c>Material</c> that can be used to render the decal
 		/// </summary>
 		/// <param name="modeString">A keyword that generally defines how the decal position
 		/// is read. This needs to be agreed between the decal renderer and shader code.</param>
@@ -193,6 +193,13 @@ namespace DecalSystem
 		/// <param name="addKeyword">Called to add a keyword</param>
 		/// <param name="removeKeyword">Called to remove a keyword</param>
 		public abstract void SetKeywords(Action<string> addKeyword, Action<string> removeKeyword);
+
+		public List<string> GetKeywords()
+		{
+			var list = new List<string>();
+			SetKeywords(list.Add, kw => list.Remove(kw));
+			return list;
+		}
 
 		public void SetKeywords(Material m)
 		{
@@ -217,13 +224,15 @@ namespace DecalSystem
 			Array.Sort(keywords);
 			var key = shader.name + "+" + string.Join("|", keywords);
 			Material ret;
-			if (materialCache.TryGetValue(key, out ret))
-				return ret;
+			materialCache.TryGetValue(key, out ret);
+			if (ret != null) return ret;
 			ret = new Material(shader);
 			foreach(var kw in keywords)
 				ret.EnableKeyword(kw);
-			materialCache.Add(key, ret);
+			materialCache[key] = ret;
 			return ret;
 		}
+
+		public abstract Shader GetShaderForMode(string mode);
 	}
 }

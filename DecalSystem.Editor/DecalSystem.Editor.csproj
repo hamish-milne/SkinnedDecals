@@ -31,9 +31,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="DecalMaterialEditor.cs" />
+    <Compile Include="DecalProjectorEditor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="DecalVariantCollector.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="System" />
     <Reference Include="UnityEditor">
       <HintPath>..\..\..\..\..\Program Files\Unity 5.3\Editor\Data\Managed\UnityEditor.dll</HintPath>
       <Private>False</Private>
