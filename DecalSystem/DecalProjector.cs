@@ -33,6 +33,12 @@ namespace DecalSystem
 		[SerializeField] protected FilterMode materialFilterMode;
 		[SerializeField] protected List<Material> materialFilter = new List<Material>();
 
+		public virtual DecalMaterial DecalMaterial
+		{
+			get { return decal; }
+			set { decal = value; }
+		}
+
 		public virtual FilterMode ObjectFilterMode
 		{
 			get { return objectFilterMode; }
@@ -79,6 +85,8 @@ namespace DecalSystem
 
 		public virtual int Project(IList<DecalInstance> instances = null)
 		{
+			if (decal == null)
+				throw new InvalidOperationException("No decal material");
 			var allObjects = DecalObject.ActiveObjects;
 			var count = 0;
 			var projectorBounds = GetBounds();
@@ -119,6 +127,8 @@ namespace DecalSystem
 
 		public virtual int ProjectBaked(IList<Renderer> instances = null)
 		{
+			if(decal == null)
+				throw new InvalidOperationException("No decal material");
 			var allObjects = Application.isPlaying ? DecalObject.ActiveObjects
 				: FindObjectsOfType<DecalObject>();
 			var count = 0;
@@ -135,9 +145,6 @@ namespace DecalSystem
 				var mat = decal.GetMaterial("");
 				if (mat == null)
 					throw new InvalidOperationException("No default mode for decal material");
-				mat = Instantiate(mat);
-				var instanceName = obj.name + ":" + decal.name;
-				mat.name = instanceName;
 				decal.CopyTo(mat);
 
 				var mesh = obj.GetCurrentMesh();
@@ -150,7 +157,7 @@ namespace DecalSystem
 						submeshMask |= (1 << i);
 				}
 				mesh = ProjectionUtility.GetMesh(mesh, obj.transform, transform, obj.Mesh, submeshMask);
-				mesh.name = instanceName;
+				mesh.name = obj.name + ":" + decal.name;
 				var newObj = new GameObject(decal.name);
 				newObj.transform.SetParent(obj.transform, false);
 				var newRenderer = obj.CreateRenderer(newObj, mesh);
@@ -159,17 +166,6 @@ namespace DecalSystem
 				count++;
 			}
 			return count;
-		}
-
-		void Update()
-		{
-			if (Input.GetKeyDown(KeyCode.A))
-			{
-				Project();
-				DecalManager.Current.ClearData();
-			}
-			if (Input.GetKeyDown(KeyCode.B))
-				ProjectBaked();
 		}
 
 		protected virtual void OnDrawGizmosSelected()

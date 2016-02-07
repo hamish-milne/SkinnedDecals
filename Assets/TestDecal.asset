@@ -11,13 +11,14 @@ MonoBehaviour:
   m_Script: {fileID: 2032810949, guid: 985b4d1823d2b41469085ab826add42f, type: 3}
   m_Name: TestDecal
   m_EditorClassIdentifier: 
+  defaultMaterial: {fileID: 2100000, guid: cf62f3e5577c78049b3c7a23d0acdfbf, type: 2}
   color: {r: 1, g: 1, b: 1, a: 1}
   emission: {r: 0, g: 0, b: 0, a: 0}
-  smoothness: 0.579
-  metallic: 0
-  parallax: 0.08
+  smoothness: 0.862
+  metallic: 1
+  parallax: 0.0005
   albedo: {fileID: 2800000, guid: 7c5c3313ecb5b8142a446c2304d0dc2b, type: 3}
-  normal: {fileID: 0}
+  normal: {fileID: 2800000, guid: 3b5b7be0f2332c24f89a2af018daa62d, type: 3}
   roughnessMap: {fileID: 0}
-  parallaxMap: {fileID: 0}
+  parallaxMap: {fileID: 2800000, guid: 08e402839e4abce44abe27b8ffd4d7e6, type: 3}
   emissionMap: {fileID: 0}

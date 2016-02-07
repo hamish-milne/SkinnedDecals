@@ -22,9 +22,11 @@ namespace DecalSystem
 		private Mesh mesh;
 		private MeshRenderer meshRenderer;
 
-		public override Mesh Mesh => mesh ?? (mesh = GetComponent<MeshFilter>().sharedMesh);
+		public override Mesh Mesh =>
+			mesh != null ? mesh : (mesh = GetComponent<MeshFilter>().sharedMesh);
 
-		public MeshRenderer MeshRenderer => meshRenderer ?? (meshRenderer = GetComponent<MeshRenderer>());
+		public MeshRenderer MeshRenderer =>
+			meshRenderer != null ? meshRenderer : (meshRenderer = GetComponent<MeshRenderer>());
 
 		public override bool ScreenSpace => false;
 
@@ -49,8 +51,10 @@ namespace DecalSystem
 				return true;
 			}
 
-			public bool RefreshMatrices()
+			public bool RefreshMatrices(bool force)
 			{
+				bool doRefresh = properties == null || material == null || force;
+				if (!doRefresh) return false;
 				if(properties == null)
 					properties = new MaterialPropertyBlock();
 				else
@@ -76,7 +80,6 @@ namespace DecalSystem
 					(matrices.Count > 1 ? "_FIXED4" : "_FIXEDSINGLE"));
 				var ret = newMaterial != material;
 				material = newMaterial;
-				DecalMaterial.CopyTo(properties);
 				return ret;
 			}
 
@@ -85,7 +88,7 @@ namespace DecalSystem
 				this.obj = obj;
 				this.decal = decal;
 				matrices.Add(matrix);
-				RefreshMatrices();
+				RefreshMatrices(true);
 				UpdateMaterial();
 			}
 
@@ -116,7 +119,7 @@ namespace DecalSystem
 				instances.Add(ret = new FixedChannel(this, decal, matrix));
 				ClearData();
 			}
-			if(ret.RefreshMatrices())
+			if(ret.RefreshMatrices(true))
 				ClearData();
 			return ret;
 		}
@@ -138,6 +141,7 @@ namespace DecalSystem
 				.Where(obj => obj.Enabled)
 				.Select(obj =>
 			{
+				obj.RefreshMatrices(false);
 				var data = obj.GetMeshData();
 				data.mesh = Mesh;
 				data.transform = MeshRenderer.transform;

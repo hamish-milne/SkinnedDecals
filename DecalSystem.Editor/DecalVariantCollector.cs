@@ -84,8 +84,9 @@ namespace DecalSystem.Editor
 		[MenuItem("Assets/Collect DecalSystem variants")]
 		public static void CreateAndCollect()
 		{
-			var obj = UnityEngine.Object.FindObjectOfType<DecalVariantCollection>()
-				?? ScriptableObject.CreateInstance<DecalVariantCollection>();
+			var obj = UnityEngine.Object.FindObjectOfType<DecalVariantCollection>();
+			if(obj == null)
+				obj = ScriptableObject.CreateInstance<DecalVariantCollection>();
 			AssetDatabase.CreateAsset(obj, "Assets/Collector.asset");
 			Collect(obj);
 			Selection.activeObject = obj;

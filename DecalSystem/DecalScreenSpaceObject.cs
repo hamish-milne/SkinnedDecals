@@ -68,7 +68,6 @@ namespace DecalSystem
 				.Select(obj => new MeshData
 			{
 				material = obj.DecalMaterial.GetMaterial("_SCREENSPACE"),
-				materialPropertyBlock = obj.DecalMaterial.Properties,
 				matrix = obj.matrix,
 				mesh = cube
 			}).ToArray();

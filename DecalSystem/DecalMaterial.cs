@@ -153,6 +153,16 @@ namespace DecalSystem
 			else
 				Properties.Clear();
 			CopyTo(Properties);
+			if (defaultMaterial != null)
+			{
+				SetKeywords(defaultMaterial);
+				CopyTo(defaultMaterial);
+			}
+			foreach (var mat in materialCache.Values.Where(mat => mat != null))
+			{
+				SetKeywords(mat);
+				CopyTo(mat);
+			}
 		}
 
 		/// <summary>
@@ -175,7 +185,37 @@ namespace DecalSystem
 				prop.materialAction(this, material);
 		}
 
-		// TODO: Rework material cache
+		private readonly Dictionary<string, Material> materialCache
+			= new Dictionary<string, Material>();
+
+		/// <summary>
+		/// Stores the default (no mode keyword) material here, so the reference can be preserved.
+		/// </summary>
+		/// <remarks>The default material is used to render baked decals, and so needs to
+		/// be saved as an asset. This field allows us to reference that asset and reduce
+		/// the object count slightly.</remarks>
+		[SerializeField]
+		protected Material defaultMaterial;
+
+		/// <summary>
+		/// Creates a new <c>Material</c> that can be used to render the decal
+		/// </summary>
+		/// <param name="modeString">A keyword that generally defines how the decal position
+		/// is read. This needs to be agreed between the decal renderer and shader code.</param>
+		/// <returns>A new material with the correct shader and keywords set, or <c>null</c>
+		/// if the given mode is not supported.</returns>
+		public virtual Material CreateMaterial(string modeString)
+		{
+			var shader = GetShaderForMode(modeString);
+			var mat = shader == null ? null : new Material(shader);
+			if (mat != null)
+			{
+				mat.name = name + (modeString == "" ? "Default" : modeString);
+				SetKeywords(mat);
+				CopyTo(mat);
+			}
+			return mat;
+		}
 
 		/// <summary>
 		/// Returns a cached <c>Material</c> that can be used to render the decal
@@ -183,9 +223,18 @@ namespace DecalSystem
 		/// <param name="modeString">A keyword that generally defines how the decal position
 		/// is read. This needs to be agreed between the decal renderer and shader code.</param>
 		/// <returns>A cached material with the correct shader and keywords set, or <c>null</c>
-		/// if the given mode is not supported. It does *not* have any decal-specific properties
-		/// set; use <c>Properties</c> or instantiate the material and use <c>CopyTo</c>.</returns>
-		public abstract Material GetMaterial(string modeString);
+		/// if the given mode is not supported.</returns>
+		public Material GetMaterial(string modeString)
+		{
+			if (modeString == "")
+				return defaultMaterial != null ? defaultMaterial : (defaultMaterial
+					= CreateMaterial(""));
+			Material mat;
+			materialCache.TryGetValue(modeString, out mat);
+			if (mat == null)
+				materialCache[modeString] = mat = CreateMaterial(modeString);
+			return mat;
+		}
 
 		/// <summary>
 		/// Gets the keywords needed to display the decal with the current properties
@@ -194,43 +243,14 @@ namespace DecalSystem
 		/// <param name="removeKeyword">Called to remove a keyword</param>
 		public abstract void SetKeywords(Action<string> addKeyword, Action<string> removeKeyword);
 
-		public List<string> GetKeywords()
-		{
-			var list = new List<string>();
-			SetKeywords(list.Add, kw => list.Remove(kw));
-			return list;
-		}
-
 		public void SetKeywords(Material m)
 		{
 			SetKeywords(m.EnableKeyword, m.DisableKeyword);
 		}
 
-		private static readonly Dictionary<string, Material> materialCache
-			= new Dictionary<string, Material>();
-
-		/// <summary>
-		/// Gets a cached material with the given shader and keywords
-		/// </summary>
-		/// <param name="shader"></param>
-		/// <param name="keywords"></param>
-		/// <returns></returns>
-		protected static Material GetMaterial(Shader shader, string[] keywords)
+		public virtual bool IsModeSupported(string mode)
 		{
-			if(shader == null)
-				throw new ArgumentNullException(nameof(shader));
-			if(keywords == null)
-				throw new ArgumentNullException(nameof(keywords));
-			Array.Sort(keywords);
-			var key = shader.name + "+" + string.Join("|", keywords);
-			Material ret;
-			materialCache.TryGetValue(key, out ret);
-			if (ret != null) return ret;
-			ret = new Material(shader);
-			foreach(var kw in keywords)
-				ret.EnableKeyword(kw);
-			materialCache[key] = ret;
-			return ret;
+			return GetShaderForMode(mode)?.isSupported ?? false;
 		}
 
 		public abstract Shader GetShaderForMode(string mode);

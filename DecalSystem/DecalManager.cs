@@ -9,6 +9,7 @@ namespace DecalSystem
 	/// <summary>
 	/// Collects decal commands to render them, and provides other shared functionality
 	/// </summary>
+	[ExecuteInEditMode]
 	public class DecalManager : MonoBehaviour
 	{
 		protected const int numRenderPaths = 4;

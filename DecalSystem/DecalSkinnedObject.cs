@@ -38,8 +38,8 @@ namespace DecalSystem
 
 		public override Renderer Renderer => SkinnedRenderer;
 
-		public SkinnedMeshRenderer SkinnedRenderer
-			=> skinnedRenderer ?? (skinnedRenderer = GetComponent<SkinnedMeshRenderer>());
+		public SkinnedMeshRenderer SkinnedRenderer =>
+			skinnedRenderer != null ? skinnedRenderer : (skinnedRenderer = GetComponent<SkinnedMeshRenderer>());
 
 		public override bool UseManualCulling => true;
 
@@ -317,7 +317,7 @@ namespace DecalSystem
 				if (Sm4Supported)
 				{
 					if(material == null)
-						material = Instantiate(DecalMaterial.GetMaterial("_SKINNEDBUFFER"));
+						material = DecalMaterial.CreateMaterial("_SKINNEDBUFFER");
 					if (buffer == null || buffer.count != count)
 					{
 						buffer = new ComputeBuffer(count, Marshal.SizeOf(typeof (Vector2)));
@@ -328,7 +328,7 @@ namespace DecalSystem
 				else
 				{
 					if(material == null)
-						material = Instantiate(DecalMaterial.GetMaterial("_SKINNEDUV"));
+						material = DecalMaterial.CreateMaterial("_SKINNEDUV");
 					list = new List<Vector4>(count);
 				}
 			}

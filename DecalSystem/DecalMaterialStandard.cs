@@ -59,24 +59,12 @@ namespace DecalSystem
 				removeKeyword("_EMISSION");
 		}
 
-		public override Material GetMaterial(string modeKeyword)
-		{
-			var shader = GetShaderForMode(modeKeyword);
-			if (shader == null) return null;
-			var keywordList = new List<string>(4);
-			SetKeywords(keywordList.Add, s => keywordList.Remove(s));
-			keywordList.Add(modeKeyword);
-			return GetMaterial(shader, keywordList.ToArray());
-		}
-
 		public override Shader GetShaderForMode(string mode)
 		{
 			switch (mode)
 			{
 				case "_SKINNEDBUFFER":
-					if (!Sm4Supported)
-						return null;
-					return Sm4Shader;
+					return Sm4Shader?.isSupported != true ? null : Sm4Shader;
 				case "_SKINNEDUV":
 				case "_FIXEDSINGLE":
 				case "_FIXED4":

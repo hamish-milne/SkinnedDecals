@@ -61,10 +61,12 @@ namespace DecalSystem.Editor
 				}
 				serializedObject.ApplyModifiedProperties();
 				// Update the keywords, which might need to be changed now
-				for(int i = 0; i < targets.Length; i++)
-					((DecalMaterial)targets[i]).SetKeywords(materials[i]);
-				if(Application.isPlaying)
-					DecalObject.RefreshAll(RefreshAction.MaterialPropertiesChanged);
+				for (int i = 0; i < targets.Length; i++)
+				{
+					var o = ((DecalMaterial)targets[i]);
+					o.Refresh();
+					o.SetKeywords(materials[i]);
+				}
 			}
 		}
 
@@ -104,16 +106,9 @@ namespace DecalSystem.Editor
 				materials = objs
 					.Select(m => m.GetMaterial(""))
 					.ToArray();
-				// This can in theory happen, esp. when transitioning between play modes
-				if (materials.Any(m => m == null))
-					materials = null;
-				else
-				{
-					for (int i = 0; i < materials.Length; i++)
-						materials[i] = Instantiate(materials[i]);
-					for (int i = 0; i < objs.Length; i++)
-						objs[i].CopyTo(materials[i]);
-				}
+				// In theory, GetMaterial can return null at any point
+				materials = materials.Any(m => m == null) ?
+					null : materials.Select(Instantiate).ToArray();
 			}
 			if (materials != null && materialEditor == null)
 				// ReSharper disable once CoVariantArrayConversion
