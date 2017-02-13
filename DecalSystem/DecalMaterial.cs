@@ -211,6 +211,7 @@ namespace DecalSystem
 			if (mat != null)
 			{
 				mat.name = name + (modeString == "" ? "Default" : modeString);
+				mat.EnableKeyword(modeString);
 				SetKeywords(mat);
 				CopyTo(mat);
 			}
@@ -231,6 +232,11 @@ namespace DecalSystem
 					= CreateMaterial(""));
 			Material mat;
 			materialCache.TryGetValue(modeString, out mat);
+			if (mat != null && !mat.IsKeywordEnabled(modeString))
+			{
+				Debug.LogError($"Decal material keyword was modified! Expected {modeString}", mat);
+				mat = null;
+			}
 			if (mat == null)
 				materialCache[modeString] = mat = CreateMaterial(modeString);
 			return mat;

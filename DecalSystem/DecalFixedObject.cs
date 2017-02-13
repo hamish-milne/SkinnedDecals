@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using static DecalSystem.ShaderKeywords;
 
 namespace DecalSystem
 {
@@ -11,7 +12,7 @@ namespace DecalSystem
 	[RequireComponent(typeof(MeshRenderer))]
 	public class DecalFixedObject : DecalObjectBase
 	{
-		private static readonly string[] modes = {"_FIXEDSINGLE", "_FIXED4", "_FIXED8"};
+		private static readonly string[] modes = {FixedSingle, Fixed4, Fixed8};
 
 		public override string[] RequiredModes => modes;
 
@@ -62,22 +63,26 @@ namespace DecalSystem
 				var ret = UpdateMaterial();
 				if (matrices.Count == 1)
 				{
-					properties.SetMatrix("_Projector", matrices[0]);
+					properties.SetMatrix(ProjectorSingle, matrices[0]);
 				}
 				else
 				{
 					var dummyMatrix = Matrix4x4.TRS(Vector3.one*float.NegativeInfinity, Quaternion.identity, Vector3.one);
 					var shaderPropertyCount = matrices.Count > 4 ? 8 : 4;
-					for (int i = 0; i < shaderPropertyCount; i++)
-						properties.SetMatrix($"_Projectors{i}", i < matrices.Count ? matrices[i] : dummyMatrix);
+					properties.SetMatrixArray(ProjectorMulti,
+						matrices.Concat(Enumerable.Repeat(dummyMatrix, shaderPropertyCount-matrices.Count)).ToArray());
+					// For Unity < 5.5 (I think)
+					/*for (int i = 0; i < shaderPropertyCount; i++)
+						properties.SetMatrix(ProjectorMulti + i,
+							i < matrices.Count ? matrices[i] : dummyMatrix);*/
 				}
 				return ret;
 			}
 
 			public bool UpdateMaterial()
 			{
-				var newMaterial = DecalMaterial.GetMaterial(matrices.Count > 4 ? "_FIXED8" :
-					(matrices.Count > 1 ? "_FIXED4" : "_FIXEDSINGLE"));
+				var newMaterial = DecalMaterial.GetMaterial(matrices.Count > 4 ? Fixed8 :
+					(matrices.Count > 1 ? Fixed4 : FixedSingle));
 				var ret = newMaterial != material;
 				material = newMaterial;
 				return ret;

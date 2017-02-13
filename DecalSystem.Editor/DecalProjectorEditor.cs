@@ -11,27 +11,34 @@ namespace DecalSystem.Editor
 		public override void OnInspectorGUI()
 		{
 			base.OnInspectorGUI();
+			var projector = (DecalProjector)target;
 
 			GUILayout.BeginHorizontal();
 			GUILayout.FlexibleSpace();
 			if (GUILayout.Button("Project", GUILayout.Width(120f), GUILayout.Height(30f)))
 			{
-				((DecalProjector)target).Project();
+				projector.Project();
 			}
 			GUILayout.FlexibleSpace();
 			if (GUILayout.Button("Bake", GUILayout.Width(120f), GUILayout.Height(30f)))
 			{
-				var projector = (DecalProjector) target;
 				Renderer[] renderers;
 				projector.ProjectBaked(out renderers);
 				// Create assets for default materials if needed
 				var assetDir = AssetDatabase.GetAssetPath(projector.DecalMaterial);
 				assetDir = string.IsNullOrEmpty(assetDir) ?
-					"Assets/" : Path.GetDirectoryName(assetDir);
-				foreach (var m in renderers
-					.SelectMany(r => r.sharedMaterials)
-					.Where(m => string.IsNullOrEmpty(AssetDatabase.GetAssetPath(m))))
-					AssetDatabase.CreateAsset(m, assetDir + "/" + m.name + ".mat");
+					"Assets" : Path.GetDirectoryName(assetDir);
+				assetDir += "/";
+				foreach (var r in renderers)
+				{
+					foreach(var m in r.sharedMaterials)
+						if(string.IsNullOrEmpty(AssetDatabase.GetAssetPath(m)))
+							AssetDatabase.CreateAsset(m, assetDir + m.name + ".mat");
+					var mesh = (r as SkinnedMeshRenderer)?.sharedMesh ?? r.GetComponent<MeshFilter>().sharedMesh;
+					if(string.IsNullOrEmpty(AssetDatabase.GetAssetPath(mesh)))
+						AssetDatabase.CreateAsset(mesh, assetDir +
+							projector.name + "_" + r.name + "_" + projector.DecalMaterial.name + ".asset");
+				}
 				Selection.activeObject = renderers.FirstOrDefault() ?? target;
 				EditorUtility.SetDirty(projector.DecalMaterial);
 			}

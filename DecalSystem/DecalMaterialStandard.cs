@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using UnityEngine;
+using static DecalSystem.ShaderKeywords;
 
 namespace DecalSystem
 {
@@ -21,11 +21,6 @@ namespace DecalSystem
 		/// Draws most decal types
 		/// </summary>
 		public static Shader BaseShader => baseShader ?? (baseShader = Shader.Find("Decal/Standard"));
-		
-		/// <summary>
-		/// Whether the <c>Sm4Shader</c> is included and supported
-		/// </summary>
-		public static bool Sm4Supported => Sm4Shader?.isSupported ?? false;
 
 		[SerializeField, MaterialProperty("_Color")]            protected Color color = Color.white;
 		[SerializeField, MaterialProperty("_EmissionColor")]    protected Color emission = Color.black;
@@ -63,13 +58,13 @@ namespace DecalSystem
 		{
 			switch (mode)
 			{
-				case "_SKINNEDBUFFER":
+				case SkinnedBuffer:
 					return Sm4Shader?.isSupported != true ? null : Sm4Shader;
-				case "_SKINNEDUV":
-				case "_FIXEDSINGLE":
-				case "_FIXED4":
-				case "_FIXED8":
-				case "_SCREENSPACE":
+				case SkinnedUv:
+				case FixedSingle:
+				case Fixed4:
+				case Fixed8:
+				case ScreenSpace:
 				case "":
 					return BaseShader;
 				default:

@@ -7,7 +7,7 @@ namespace DecalSystem
 {
 	public class DecalScreenSpaceObject : DecalObjectBase
 	{
-		private static readonly string[] modes = {"_SCREENSPACE"};
+		private static readonly string[] modes = {ShaderKeywords.ScreenSpace};
 
 		public override string[] RequiredModes => modes;
 
@@ -56,20 +56,33 @@ namespace DecalSystem
 				ClearData();
 		}
 
-		public override Mesh Mesh => DecalManager.Current.CubeMesh;
+		private static Mesh cubeMesh;
+
+		public static Mesh CubeMesh
+		{
+			get
+			{
+				if (cubeMesh != null) return cubeMesh;
+				cubeMesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+				if(cubeMesh == null)
+					throw new Exception("Cube mesh not found!");
+				return cubeMesh;
+			}
+		}
+
+		public override Mesh Mesh => CubeMesh;
 
 		protected override bool RequireDepthTexture => true;
 
 		protected virtual MeshData[] GetMeshData()
 		{
-			var cube = DecalManager.Current.CubeMesh;
 			return instances
 				.Where(obj => obj.Enabled)
 				.Select(obj => new MeshData
 			{
-				material = obj.DecalMaterial.GetMaterial("_SCREENSPACE"),
+				material = obj.DecalMaterial.GetMaterial(ShaderKeywords.ScreenSpace),
 				matrix = obj.matrix,
-				mesh = cube
+				mesh = Mesh
 			}).ToArray();
 		}
 

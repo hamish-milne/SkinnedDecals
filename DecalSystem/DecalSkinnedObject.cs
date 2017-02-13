@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEngine;
+using UnityEngine.Profiling;
+using static DecalSystem.ShaderKeywords;
 
 namespace DecalSystem
 {
@@ -22,7 +24,7 @@ namespace DecalSystem
 	[RequireComponent(typeof(SkinnedMeshRenderer))]
 	public class DecalSkinnedObject : DecalObjectBase
 	{
-		private static readonly string[] modes = { "_SKINNEDUV", "_SKINNEDBUFFER" };
+		private static readonly string[] modes = { SkinnedBuffer, SkinnedUv };
 
 		public override string[] RequiredModes => modes;
 
@@ -50,6 +52,8 @@ namespace DecalSystem
 
 		[SerializeField] protected Mesh mergedMesh;
 
+		[SerializeField] protected bool useBuffer;
+
 		private Mesh bakedMesh;
 		private bool bakeRequired = true;
 
@@ -65,7 +69,7 @@ namespace DecalSystem
 			return bakedMesh;
 		}
 
-		protected const string decalRendererName = "__DECAL__";
+		protected const string DecalRendererName = "__DECAL__";
 
 		protected int[] GetTriangles(int submesh)
 		{
@@ -77,12 +81,10 @@ namespace DecalSystem
 			return tris;
 		}
 
-		public static bool Sm4Supported => DecalMaterialStandard.Sm4Supported;
-
 		protected bool TryUseCommandBuffer =>
 			SkinnedRenderer.sharedMesh.subMeshCount > 1 &&
 			!DecalManager.Current.RequiresRenderingPath(RenderingPath.Forward) &&
-			Sm4Supported;
+			useBuffer;
 
 		public bool UseCommandBuffer =>
 			DecalRenderer == SkinnedRenderer &&
@@ -97,18 +99,18 @@ namespace DecalSystem
 				// If this renderer has only one submesh, we can add decal commands to the material list
 				if (SkinnedRenderer.sharedMesh.subMeshCount <= 1 ||
 					// Otherwise, we'll need to make a new renderer if the forward path is being used,
-					// OR SM4 isn't supported
-					(!DecalManager.Current.RequiresRenderingPath(RenderingPath.Forward) && Sm4Supported))
+					// OR buffers aren't supported
+					(!DecalManager.Current.RequiresRenderingPath(RenderingPath.Forward) && useBuffer))
 				{
 					decalRenderer = SkinnedRenderer;
 				}
 				else
 				{
 					// First try to find an existing decal renderer...
-					var rTransform = SkinnedRenderer.transform.Find(decalRendererName);
+					var rTransform = SkinnedRenderer.transform.Find(DecalRendererName);
 					if (rTransform == null)
 					{
-						var newObj = new GameObject(decalRendererName) {hideFlags = HideFlags.HideAndDontSave};
+						var newObj = new GameObject(DecalRendererName) {hideFlags = HideFlags.HideAndDontSave};
 						rTransform = newObj.transform;
 						rTransform.parent = SkinnedRenderer.transform;
 					}
@@ -229,7 +231,7 @@ namespace DecalSystem
 
 			public void Apply(int submesh)
 			{
-				if (Sm4Supported)
+				if (obj.useBuffer)
 				{
 					buffer.SetData(array);
 				}
@@ -283,7 +285,7 @@ namespace DecalSystem
 							throw new Exception("Invalid UV channel");
 					}
 					ApplyToMesh(obj.Mesh, uvChannel, useZw);
-					material.SetInt("_UvChannel", channelId);
+					material.SetInt(ShaderKeywords.UvChannel, channelId);
 				}
 				submeshMask |= (1 << submesh);
 			}
@@ -303,7 +305,7 @@ namespace DecalSystem
 			public void BindBuffer()
 			{
 				if(buffer != null)
-					material.SetBuffer("_Buffer", buffer);
+					material.SetBuffer(ShaderKeywords.Buffer, buffer);
 			}
 
 			public void Reload(int count)
@@ -314,10 +316,10 @@ namespace DecalSystem
 					for (int i = 0; i < count; i++)
 						array[i] = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
 				}
-				if (Sm4Supported)
+				if (obj.useBuffer)
 				{
 					if(material == null)
-						material = DecalMaterial.CreateMaterial("_SKINNEDBUFFER");
+						material = DecalMaterial.CreateMaterial(SkinnedBuffer);
 					if (buffer == null || buffer.count != count)
 					{
 						buffer = new ComputeBuffer(count, Marshal.SizeOf(typeof (Vector2)));
@@ -328,7 +330,7 @@ namespace DecalSystem
 				else
 				{
 					if(material == null)
-						material = DecalMaterial.CreateMaterial("_SKINNEDUV");
+						material = DecalMaterial.CreateMaterial(SkinnedUv);
 					list = new List<Vector4>(count);
 				}
 			}
@@ -382,9 +384,17 @@ namespace DecalSystem
 
 		protected DecalChannel CreateChannel(DecalMaterial decal, int submesh)
 		{
+			bool decalUseBuffers = decal.IsModeSupported(SkinnedBuffer);
+			if (channels.Count == 0)
+				useBuffer = decalUseBuffers;
+			else if (useBuffer != decalUseBuffers)
+			{
+				Debug.LogError("DecalSkinnedObject: Mismatch in buffer support! " + decal, this);
+				return null;
+			}
 			Profiler.BeginSample("Create channel");
 			DecalChannel ret = null;
-			if (Sm4Supported)
+			if (useBuffer)
 			{
 				ret = new DecalChannel(this, decal, Mesh.vertexCount);
 			}
@@ -440,8 +450,11 @@ namespace DecalSystem
 				}
 			}
 			var newC = CreateChannel(decal, submesh);
-			newC.AttemptCopy(uvBuffer, true);
-			newC.Apply(submesh);
+			if (newC != null)
+			{
+				newC.AttemptCopy(uvBuffer, true);
+				newC.Apply(submesh);
+			}
 			Profiler.EndSample();
 			Profiler.EndSample();
 			ClearData();
@@ -497,7 +510,7 @@ namespace DecalSystem
 		protected virtual void LateUpdate()
 		{
 			bakeRequired = true;
-			// Rebind buffers every frame - workaround for a b_u_g where they sometimes become unbound
+			// Rebind buffers every frame - workaround for a 'feature' in unity where they sometimes become unbound
 			foreach (var c in channels)
 				c.BindBuffer();
 		}

@@ -12,11 +12,10 @@ namespace DecalSystem
 	[ExecuteInEditMode]
 	public class DecalManager : MonoBehaviour
 	{
-		protected const int numRenderPaths = 4;
-
 		/// <summary>
 		/// Stores data to render for a given camera
 		/// </summary>
+		[Serializable]
 		protected class CameraData
 		{
 			/// <summary>
@@ -35,19 +34,12 @@ namespace DecalSystem
 			public readonly List<MeshData> meshData = new List<MeshData>(); 
 		}
 
-		[SerializeField] protected Mesh cubeMesh;
-
 		/// <summary>
 		/// Whether to draw decals on the scene camera
 		/// </summary>
 		[SerializeField] protected bool renderSceneCamera;
 
-		private CameraData[] cameraData; 
-
-		/// <summary>
-		/// A cube mesh, generally used for drawing screen space decals
-		/// </summary>
-		public Mesh CubeMesh => cubeMesh;
+		private CameraData[] cameraData;
 
 		/// <summary>
 		/// The currently enabled manager instance
@@ -60,6 +52,8 @@ namespace DecalSystem
 		{
 			// Clear data when an object is enabled or disabled
 			DecalObject.ObjectChangeState += (o, b) => Current?.ClearData();
+			// Clear data when a decal is added
+			DecalObject.DataChanged += o => Current?.ClearData();
 		}
 
 		/// <summary>
@@ -77,22 +71,24 @@ namespace DecalSystem
 			}
 		}
 
-		protected virtual void OnEnable()
+		public static DecalManager GetOrCreate()
 		{
-			if (Current == null)
-				Current = this;
-			else if(Current != this)
-				Debug.LogWarning("DecalSystem: Multiple managers active in scene", this);
+			if(Current == null)
+				Current = new GameObject("DecalManager").AddComponent<DecalManager>();
+			return Current;
 		}
 
-		protected virtual void OnDisable()
+		protected virtual void OnEnable()
 		{
-			if (Current == this)
-				Current = null;
+			if (Current != null && Current != this)
+				Debug.LogWarning($"DecalSystem: Multiple managers active in scene ({Current}, {this})", this);
+			Current = this;
 		}
 
 		protected virtual void OnDestroy()
 		{
+			if (Current == this)
+				Current = null;
 			ClearData();
 		}
 

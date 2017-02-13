@@ -136,7 +136,7 @@ namespace DecalSystem.Editor
 			// Create 'dummy' materials to force Unity to include them, then
 			var kwList = new List<string>();
 			var variants = deps.OfType<Camera>().Select(c => c.renderingPath)
-				.Concat(new[] {PlayerSettings.renderingPath})
+				//.Concat(new[] {UnityEditor.Rendering.EditorGraphicsSettings.})
 				.Distinct()
 				.SelectMany(GetPassTypes)
 				.SelectMany(pt => decalMaterials
@@ -155,6 +155,9 @@ namespace DecalSystem.Editor
 			foreach(var m in variants)
 				AssetDatabase.AddObjectToAsset(m, collection);
 			collection.Materials.Clear();
+			foreach(var mat in AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(collection)))
+				if(mat != collection)
+					UnityEngine.Object.DestroyImmediate(mat, true);
 			collection.Materials.AddRange(variants);
 			EditorUtility.SetDirty(collection);
 			if (!preloadedAssets.Contains(collection))

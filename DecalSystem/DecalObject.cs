@@ -136,6 +136,11 @@ namespace DecalSystem
 		/// The list of active scene cameras and/or rendering paths were changed
 		/// </summary>
 		CamerasChanged = 0x8,
+
+		/// <summary>
+		/// The properties of the attached renderer changed. This may cause decal instances to be wiped
+		/// </summary>
+		RendererChanged = 0x10,
 	}
 
 	/// <summary>

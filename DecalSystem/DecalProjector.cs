@@ -98,6 +98,7 @@ namespace DecalSystem
 				{
 					var o = obj.AddDecal(transform, decal, -1);
 					if (o == null) continue;
+					Debug.Log($"Adding decal to {obj}");
 					instances?.Add(o);
 					count++;
 				}
@@ -110,6 +111,7 @@ namespace DecalSystem
 						if (FilterList(materialFilter, materialFilterMode, m)) continue;
 						var o = obj.AddDecal(transform, decal, i);
 						if (o == null) continue;
+						Debug.Log($"Adding decal to {obj}");
 						instances?.Add(o);
 						count++;
 					}
