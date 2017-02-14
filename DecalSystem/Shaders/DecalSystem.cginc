@@ -2,12 +2,33 @@
 #include "UnityCG.cginc"
 #include "DecalLighting.cginc"
 
+// Infer some defines from the shader keywords
+#ifdef _FIXED4
+	#define _FIXEDMULTI
+	#define FIXED_COUNT (4)
+#elif defined(_FIXED8)
+	#define _FIXEDMULTI
+	#define FIXED_COUNT (8)
+#endif
+
+#ifdef _PARALLAXMAP
+	#define _NORMALMAP
+#endif
+
 // The surface shader generator doesn't like
 // some syntax, such as [unroll] and Buffer
 #ifdef SHADER_API_D3D11
 #define UNROLL [unroll]
 #else
+
+// Massage the defines to work for the surface shader pass
 #undef _SKINNEDBUFFER
+#ifdef _FIXED8
+#undef _FIXED8
+#undef FIXED_COUNT
+#define FIXED_COUNT 4
+#endif
+
 #define UNROLL
 #endif
 
@@ -20,12 +41,15 @@ struct Input
 	float4 screen : TEXCOORD1;
 	float3 ray : TEXCOORD2;
 #endif
-#if defined(_FIXED4) || defined(_FIXED8)
-	float4 decal1 : TEXCOORD3;
-	float4 decal2 : TEXCOORD4;
+#if defined(_FIXEDMULTI)
+	// We need to store 3 components so we can clip the bounding box
+	float4 decal1X : TEXCOORD3;
+	float4 decal1Y : TEXCOORD4;
+	float4 decal1Z : TEXCOORD5;
 	#ifdef _FIXED8
-	float4 decal3 : TEXCOORD5;
-	float4 decal4 : TEXCOORD6;
+	float4 decal2X : TEXCOORD6;
+	float4 decal2Y : TEXCOORD7;
+	float4 decal2Z : TEXCOORD8;
 	#endif
 #elif defined(_SCREENSPACE)
 	float3 localCameraPos : TEXCOORD3;
@@ -99,10 +123,10 @@ uniform float3 _EmissionColor;
 #define FIX_ORIENTATION(UV)
 #endif
 
-float2 GetDecalPos(float4x4 mat, float4 vertex)
+float3 GetDecalPos(float4x4 mat, float4 vertex)
 {
 	float4 uv = UNITY_PROJ_COORD(mul(mat, vertex));
-	float2 ret = (uv.xy / uv.w) + float2(0.5, 0.5);
+	float3 ret = (uv.xyz / uv.w) + float3(0.5, 0.5, 0.5);
 	FIX_ORIENTATION(ret);
 	return ret;
 }
@@ -133,20 +157,22 @@ void vert(inout appdata_full v, out Input o)
 	FIX_ORIENTATION(o.decalPos);
 #elif defined(_FIXEDSINGLE)
 	o.decalPos = GetDecalPos(_Projector, v.vertex);
-#elif defined(_FIXED4) || defined(_FIXED8)
+#elif defined(_FIXEDMULTI)
 
-#define FIXED_DECAL(I, O) O = GetDecalPos(_Projectors[I], v.vertex)
+#define FIXED_DECAL(I, A, B) { float3 p = GetDecalPos(_Projectors[I], v.vertex); A##X.##B = p.x; A##Y.##B = p.y; A##Z.##B = p.z; }
 
-	FIXED_DECAL(0, o.decal1.xy);
-	FIXED_DECAL(1, o.decal1.zw);
-	FIXED_DECAL(2, o.decal2.xy);
-	FIXED_DECAL(3, o.decal2.zw);
+	FIXED_DECAL(0, o.decal1, x);
+	FIXED_DECAL(1, o.decal1, y);
+	FIXED_DECAL(2, o.decal1, z);
+	FIXED_DECAL(3, o.decal1, w);
 	#ifdef _FIXED8
-	FIXED_DECAL(4, o.decal3.xy);
-	FIXED_DECAL(5, o.decal3.zw);
-	FIXED_DECAL(6, o.decal4.xy);
-	FIXED_DECAL(7, o.decal4.zw);
+	FIXED_DECAL(4, o.decal2, x);
+	FIXED_DECAL(5, o.decal2, y);
+	FIXED_DECAL(6, o.decal2, z);
+	FIXED_DECAL(7, o.decal2, w);
 	#endif
+
+#undef FIXED_DECAL
 
 #elif defined(_SCREENSPACE)
 	o.screen = ComputeScreenPos(mul(UNITY_MATRIX_MVP, v.vertex));
@@ -158,7 +184,7 @@ void vert(inout appdata_full v, out Input o)
 }
 
 #ifdef _PARALLAXMAP
-#define OUTPUT_PARALLAX(UV) { UV += ParallaxOffset(tex2D(_ParallaxMap, UV).g, _Parallax, IN.viewDirForParallax); }
+#define OUTPUT_PARALLAX(UV) { UV.xy += ParallaxOffset(tex2D(_ParallaxMap, UV).g, _Parallax, IN.viewDirForParallax); }
 #else
 #define OUTPUT_PARALLAX(UV)
 #endif
@@ -199,30 +225,34 @@ void CalculateUv(Input IN, inout float2 uv)
 	if (any(abs(decalPos.xyz) > 0.5)) discard;
 	uv = decalPos.xy + float2(0.5, 0.5);
 #elif !defined(_FIXEDMULTI)
-	uv = IN.decalPos;
-	if (any(uv != saturate(uv))) discard;
+	if (any(IN.decalPos != saturate(IN.decalPos))) discard;
+	uv = IN.decalPos.xy;
 #endif
 }
 
-#ifdef _FIXED4
-#define DEFINE_DECAL_ARRAY float2 decalPos[FIXED_COUNT] = { \
-	IN.decal1.xy, IN.decal1.zw, IN.decal2.xy, IN.decal2.zw }
-#else
-#define DEFINE_DECAL_ARRAY float2 decalPos[FIXED_COUNT] = { \
-	IN.decal1.xy, IN.decal1.zw, IN.decal2.xy, IN.decal2.zw, IN.decal3.xy, IN.decal3.zw, IN.decal4.xy, IN.decal4.zw }
-#endif
-
 void surf(Input IN, inout DecalSurfaceOutputStandard o)
 {
-	float2 uv;
-	CalculateUv(IN, uv);
 
 #ifdef _FIXEDMULTI
-	DEFINE_DECAL_ARRAY;
+	float3 decalPos[FIXED_COUNT] = { 
+#define DECAL_ARRAY_ITEM(N, C) float3(N##X.##C, N##Y.##C, N##Z.##C)
+		DECAL_ARRAY_ITEM(IN.decal1, x),
+		DECAL_ARRAY_ITEM(IN.decal1, y),
+		DECAL_ARRAY_ITEM(IN.decal1, z),
+		DECAL_ARRAY_ITEM(IN.decal1, w)
+	#ifdef _FIXED8
+		,
+		DECAL_ARRAY_ITEM(IN.decal2, x),
+		DECAL_ARRAY_ITEM(IN.decal2, y),
+		DECAL_ARRAY_ITEM(IN.decal2, z),
+		DECAL_ARRAY_ITEM(IN.decal2, w)
+	#endif
+#undef DECAL_ARRAY_ITEM
+	};
 
 	UNROLL for (uint i = 0; i < FIXED_COUNT; i++)
 	{
-		float2 uv1 = decalPos[i];
+		float3 uv1 = decalPos[i];
 		OUTPUT_PARALLAX(uv1);
 		float alpha1, smooth1, metal1;
 		float3 albedo1, normal1 = 0, emission1 = 0;
@@ -250,6 +280,9 @@ void surf(Input IN, inout DecalSurfaceOutputStandard o)
 	o.Metallic /= o.Alpha;
 	o.Emission /= o.Alpha;
 #else
+	float2 uv;
+	CalculateUv(IN, uv);
+
 	OUTPUT_PARALLAX(uv);
 	OUTPUT_ALBEDO(uv, o.Albedo, o.Alpha);
 	#ifdef _SCREENSPACE
@@ -274,11 +307,25 @@ void SmoothnessFrag(Input IN, out half4 diffuse : SV_Target0, out half4 specSmoo
 	float alpha = 0, smoothness = 0;
 
 #ifdef _FIXEDMULTI
-	DEFINE_DECAL_ARRAY;
+	float3 decalPos[FIXED_COUNT] = { 
+#define DECAL_ARRAY_ITEM(N, C) float3(N##X.##C, N##Y.##C, N##Z.##C)
+		DECAL_ARRAY_ITEM(IN.decal1, x),
+		DECAL_ARRAY_ITEM(IN.decal1, y),
+		DECAL_ARRAY_ITEM(IN.decal1, z),
+		DECAL_ARRAY_ITEM(IN.decal1, w)
+	#ifdef _FIXED8
+		,
+		DECAL_ARRAY_ITEM(IN.decal2, x),
+		DECAL_ARRAY_ITEM(IN.decal2, y),
+		DECAL_ARRAY_ITEM(IN.decal2, z),
+		DECAL_ARRAY_ITEM(IN.decal2, w)
+	#endif
+#undef DECAL_ARRAY_ITEM
+	};
 
 	UNROLL for (uint i = 0; i < FIXED_COUNT; i++)
 	{
-		float2 uv1 = decalPos[i];
+		float3 uv1 = decalPos[i];
 		OUTPUT_PARALLAX(uv1);
 		float alpha1, smooth1, metal1;
 		float3 albedo1;

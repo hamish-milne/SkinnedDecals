@@ -44,15 +44,20 @@ namespace DecalSystem
 
 			public override bool HasMultipleDecals => matrices.Count > 1;
 
-			public bool TryAddMatrix(DecalObjectBase obj, DecalMaterial decalMaterial, int submesh, Matrix4x4 matrix)
+			protected int GetMaxMatrices()
 			{
-				if (DecalMaterial != decalMaterial || this.submesh != submesh || matrices.Count >= 8)
+				return DecalMaterial.IsModeSupported(Fixed8) ? 8 : 4;
+			}
+
+			public virtual bool TryAddMatrix(DecalObjectBase obj, DecalMaterial decalMaterial, int submesh, Matrix4x4 matrix)
+			{
+				if (DecalMaterial != decalMaterial || this.submesh != submesh || matrices.Count >= GetMaxMatrices())
 					return false;
 				matrices.Add(matrix);
 				return true;
 			}
 
-			public bool RefreshMatrices(bool force)
+			public virtual bool RefreshMatrices(bool force)
 			{
 				bool doRefresh = properties == null || material == null || force;
 				if (!doRefresh) return false;
@@ -71,7 +76,7 @@ namespace DecalSystem
 					var shaderPropertyCount = matrices.Count > 4 ? 8 : 4;
 					properties.SetMatrixArray(ProjectorMulti,
 						matrices.Concat(Enumerable.Repeat(dummyMatrix, shaderPropertyCount-matrices.Count)).ToArray());
-					// For Unity < 5.5 (I think)
+					// For Unity < 5.4 (I think)
 					/*for (int i = 0; i < shaderPropertyCount; i++)
 						properties.SetMatrix(ProjectorMulti + i,
 							i < matrices.Count ? matrices[i] : dummyMatrix);*/
@@ -79,7 +84,7 @@ namespace DecalSystem
 				return ret;
 			}
 
-			public bool UpdateMaterial()
+			public virtual bool UpdateMaterial()
 			{
 				var newMaterial = DecalMaterial.GetMaterial(matrices.Count > 4 ? Fixed8 :
 					(matrices.Count > 1 ? Fixed4 : FixedSingle));
@@ -93,8 +98,6 @@ namespace DecalSystem
 				this.obj = obj;
 				this.decal = decal;
 				matrices.Add(matrix);
-				RefreshMatrices(true);
-				UpdateMaterial();
 			}
 
 			public MeshData GetMeshData()
@@ -122,6 +125,7 @@ namespace DecalSystem
 			if (ret == null)
 			{
 				instances.Add(ret = new FixedChannel(this, decal, matrix));
+				ret.UpdateMaterial();
 				ClearData();
 			}
 			if(ret.RefreshMatrices(true))

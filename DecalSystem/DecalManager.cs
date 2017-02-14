@@ -100,17 +100,17 @@ namespace DecalSystem
 		/// Notify the manager that the given object is visible to the given camera
 		/// </summary>
 		/// <param name="obj"></param>
-		/// <param name="camera"></param>
+		/// <param name="renderCamera"></param>
 		/// <remarks>
 		/// This function only takes effect when <c>DecalObject.UseManualCulling</c> is <c>true</c>
 		/// </remarks>
-		public virtual void RenderObject(DecalObject obj, Camera camera)
+		public virtual void RenderObject(DecalObject obj, Camera renderCamera)
 		{
 			if(obj == null)
 				throw new ArgumentNullException(nameof(obj));
-			if(camera == null)
-				throw new ArgumentNullException(nameof(camera));
-			toRender.Add(new KeyValuePair<DecalObject, Camera>(obj, camera));
+			if(renderCamera == null)
+				throw new ArgumentNullException(nameof(renderCamera));
+			toRender.Add(new KeyValuePair<DecalObject, Camera>(obj, renderCamera));
 		}
 
 		/// <summary>
@@ -266,6 +266,7 @@ namespace DecalSystem
 				{
 					var cd = new CameraData { camera = cam };
 					var requireDepthTexture = false;
+					// ReSharper disable once ForCanBeConvertedToForeach
 					for (int i = 0; i < activeObjects.Count; i++)
 					{
 						var rpd = activeObjects[i].GetRenderPathData(cam.actualRenderingPath);
@@ -288,6 +289,7 @@ namespace DecalSystem
 			foreach (var cd in cameraData)
 			{
 				cd.command?.Clear();
+				// ReSharper disable once ForCanBeConvertedToForeach
 				for (int i = 0; i < activeObjects.Count; i++)
 				{
 					var obj = activeObjects[i];

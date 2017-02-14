@@ -37,7 +37,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.18028377, g: 0.22571409, b: 0.30692285, a: 1}
+  m_IndirectSpecularColor: {r: 0.16788329, g: 0.21073541, b: 0.2899403, a: 1}
 --- !u!157 &3
 LightmapSettings:
   m_ObjectHideFlags: 0
@@ -122,10 +122,6 @@ MonoBehaviour:
   m_Script: {fileID: -1559218733, guid: 985b4d1823d2b41469085ab826add42f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  uvChannels: -2
-  channels: []
-  mergedMesh: {fileID: 0}
-  useBuffer: 0
 --- !u!4 &85486843 stripped
 Transform:
   m_PrefabParentObject: {fileID: 400202, guid: b235179bd2a63d1468dd430670338c55, type: 3}
@@ -439,13 +435,13 @@ Transform:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 430241327}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.502, y: 0.693, z: -0.7991}
+  m_LocalRotation: {x: -0, y: 0.41447377, z: -0, w: 0.91006124}
+  m_LocalPosition: {x: 0.849, y: 0.916, z: 0.142}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 48.972004, z: 0}
 --- !u!4 &433059825 stripped
 Transform:
   m_PrefabParentObject: {fileID: 400324, guid: b235179bd2a63d1468dd430670338c55, type: 3}
@@ -553,10 +549,6 @@ MonoBehaviour:
   m_Script: {fileID: -423928732, guid: 985b4d1823d2b41469085ab826add42f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  instances: []
-  bounds:
-    m_Center: {x: 0, y: 0, z: 0}
-    m_Extent: {x: 10, y: 0.01, z: 10}
 --- !u!4 &538183598 stripped
 Transform:
   m_PrefabParentObject: {fileID: 400176, guid: b235179bd2a63d1468dd430670338c55, type: 3}
@@ -590,10 +582,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 546740848}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 1917464271, guid: 985b4d1823d2b41469085ab826add42f, type: 3}
+  m_Script: {fileID: 1917464271, guid: 9cf32e49d40e7c9499a1aa49b300f2ec, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  renderSceneCamera: 1
+  renderSceneCamera: 0
 --- !u!4 &546740850
 Transform:
   m_ObjectHideFlags: 0
@@ -601,7 +593,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 546740848}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.231, y: 1.093, z: 0.269}
+  m_LocalPosition: {x: 2.231, y: 1.093, z: 0.249}
   m_LocalScale: {x: 0.1, y: 0.1, z: 0.1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -615,10 +607,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 546740848}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: -828303001, guid: 985b4d1823d2b41469085ab826add42f, type: 3}
+  m_Script: {fileID: -828303001, guid: 9cf32e49d40e7c9499a1aa49b300f2ec, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  decal: {fileID: 11400000, guid: 18bf890007a391c4d8d26679b94682b5, type: 2}
+  decal: {fileID: 0}
   objectFilterMode: 0
   objectFilter: []
   materialFilterMode: 0
@@ -692,7 +684,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 695541371}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.298, y: 0.977, z: 0.152}
+  m_LocalPosition: {x: 0.662, y: 0.887, z: 0.292}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -1036,7 +1028,6 @@ MonoBehaviour:
   m_Script: {fileID: 262696476, guid: 985b4d1823d2b41469085ab826add42f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  instances: []
 --- !u!4 &1174538475 stripped
 Transform:
   m_PrefabParentObject: {fileID: 400188, guid: b235179bd2a63d1468dd430670338c55, type: 3}
@@ -1160,7 +1151,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1470084314}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.035, y: -0.245, z: -0.303}
+  m_LocalPosition: {x: 1.989, y: 1.168, z: 0.641}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_Children: []
   m_Father: {fileID: 0}
@@ -1276,7 +1267,6 @@ MonoBehaviour:
   m_Script: {fileID: 262696476, guid: 985b4d1823d2b41469085ab826add42f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  instances: []
 --- !u!4 &1648614055 stripped
 Transform:
   m_PrefabParentObject: {fileID: 400268, guid: b235179bd2a63d1468dd430670338c55, type: 3}

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using static DecalSystem.ShaderKeywords;
 
@@ -10,17 +12,13 @@ namespace DecalSystem
 	[CreateAssetMenu]
 	public class DecalMaterialStandard : DecalMaterial
 	{
-		private static Shader sm4Shader, baseShader;
-
-		/// <summary>
-		/// Draws skinned decals using a <c>ComputeBuffer</c>
-		/// </summary>
-		public static Shader Sm4Shader => sm4Shader ?? (sm4Shader = Shader.Find("Decal/SM4"));
+		private static Shader shaderInstance;
+		private static HashSet<string> supportedKeywords;
 
 		/// <summary>
 		/// Draws most decal types
 		/// </summary>
-		public static Shader BaseShader => baseShader ?? (baseShader = Shader.Find("Decal/Standard"));
+		public virtual Shader ShaderInstance => shaderInstance ?? (shaderInstance = Shader.Find("Decal/Standard"));
 
 		[SerializeField, MaterialProperty("_Color")]            protected Color color = Color.white;
 		[SerializeField, MaterialProperty("_EmissionColor")]    protected Color emission = Color.black;
@@ -56,20 +54,23 @@ namespace DecalSystem
 
 		public override Shader GetShaderForMode(string mode)
 		{
-			switch (mode)
+			if (supportedKeywords == null)
 			{
-				case SkinnedBuffer:
-					return Sm4Shader?.isSupported != true ? null : Sm4Shader;
-				case SkinnedUv:
-				case FixedSingle:
-				case Fixed4:
-				case Fixed8:
-				case ScreenSpace:
-				case "":
-					return BaseShader;
-				default:
-					return null;
+				var mat = new Material(shaderInstance);
+				supportedKeywords = new HashSet<string>(new []
+				{
+					"_",
+					FixedSingle,
+					Fixed4,
+					Fixed8,
+					ScreenSpace,
+					SkinnedBuffer,
+					SkinnedUv
+				}.Where(k => mat.GetTag("DecalSystem" + k, true, "").ToLower() == "true"));
 			}
+			if (string.IsNullOrEmpty(mode))
+				mode = "_";
+			return supportedKeywords.Contains(mode) ? shaderInstance : null;
 		}
 	}
 }

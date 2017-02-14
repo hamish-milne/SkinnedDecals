@@ -6,6 +6,10 @@ using UnityEngine;
 
 namespace DecalSystem
 {
+	public class UsePropertyAttribute : PropertyAttribute
+	{
+	}
+
 	/// <summary>
 	/// Represents a mesh item that will be rendered with <c>Graphics.DrawMesh</c>
 	/// </summary>
@@ -115,42 +119,43 @@ namespace DecalSystem
 		/// <summary>
 		/// Nothing.
 		/// </summary>
-		None = 0x0,
+		None = 0,
 
 		/// <summary>
 		/// A <c>DecalInstance</c> was enabled/disabled
 		/// </summary>
-		EnableDisable = 0x1,
+		EnableDisable = 1 << 0,
 
 		/// <summary>
 		/// A <c>DecalInstance</c>'s <c>DecalMaterial</c> was changed
 		/// </summary>
-		ChangeInstanceMaterial = 0x2,
+		ChangeInstanceMaterial = 1 << 1,
 
 		/// <summary>
 		/// A <c>DecalMaterial</c>'s properties were changed
 		/// </summary>
-		MaterialPropertiesChanged = 0x4,
+		MaterialPropertiesChanged = 1 << 2,
 
 		/// <summary>
 		/// The list of active scene cameras and/or rendering paths were changed
 		/// </summary>
-		CamerasChanged = 0x8,
+		CamerasChanged = 1 << 3,
 
 		/// <summary>
 		/// The properties of the attached renderer changed. This may cause decal instances to be wiped
 		/// </summary>
-		RendererChanged = 0x10,
+		RendererChanged = 1 << 4,
 	}
 
+	/// TODO: Separate from DecalChannel
 	/// <summary>
 	/// Represents one (or more) decal instances
 	/// </summary>
 	[Serializable]
 	public abstract class DecalInstance
 	{
-		[SerializeField] protected bool enabled = true;
-		[SerializeField] protected DecalMaterial decal;
+		[SerializeField, UseProperty] protected bool enabled = true;
+		[SerializeField, UseProperty] protected DecalMaterial decal;
 
 		/// <summary>
 		/// Whether to draw this decal or not
@@ -238,10 +243,14 @@ namespace DecalSystem
 
 		/// <summary>
 		/// The mesh drawn by the object. For geometry-based objects this is the normal shared
-		/// mesh, but for screen space objects will usually be a cube.
+		/// mesh, but for screen space objects will usually be a cube or quad.
 		/// </summary>
 		public abstract Mesh Mesh { get; }
 
+		/// <summary>
+		/// Returns the exact geometry this frame. This will differ from <c>Mesh</c> for skinned objects.
+		/// </summary>
+		/// <returns></returns>
 		public virtual Mesh GetCurrentMesh()
 		{
 			return Mesh;

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEditor;
-using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 namespace DecalSystem.Editor
@@ -65,22 +64,6 @@ namespace DecalSystem.Editor
 			}
 		}
 
-		public static PassType[] GetPassTypes(RenderingPath path)
-		{
-			switch (path)
-			{
-				case RenderingPath.DeferredLighting:
-					return new[] {PassType.LightPrePassBase, PassType.LightPrePassFinal};
-				case RenderingPath.DeferredShading:
-					return new[] {PassType.Deferred};
-				case RenderingPath.Forward:
-					return new[] {PassType.ForwardBase, PassType.ForwardAdd};
-				case RenderingPath.VertexLit:
-					return new[] {PassType.Vertex, PassType.VertexLM, PassType.VertexLMRGBM};
-			}
-			return null;
-		}
-
 		[MenuItem("Assets/Collect DecalSystem variants")]
 		public static void CreateAndCollect()
 		{
@@ -131,15 +114,11 @@ namespace DecalSystem.Editor
 				.ToArray();
 			Debug.Log(includedModes.Length);
 
-			// Get all the required rendering paths, and join that with the materials and
-			// modes to get the final collection of shader variants.
+			// Get all the required materials and modes to get the collection of shader variants.
 			// Create 'dummy' materials to force Unity to include them, then
 			var kwList = new List<string>();
-			var variants = deps.OfType<Camera>().Select(c => c.renderingPath)
-				//.Concat(new[] {UnityEditor.Rendering.EditorGraphicsSettings.})
-				.Distinct()
-				.SelectMany(GetPassTypes)
-				.SelectMany(pt => decalMaterials
+			var variants =
+				decalMaterials
 					.SelectMany(dm => includedModes
 						.Select(mode =>
 						{
@@ -149,7 +128,7 @@ namespace DecalSystem.Editor
 							return new Variant(dm.GetShaderForMode(mode), kwList);
 						})
 					)
-				).Distinct()
+				.Distinct()
 				.Select(v => v.GetMaterial())
 				.ToArray();
 			foreach(var m in variants)

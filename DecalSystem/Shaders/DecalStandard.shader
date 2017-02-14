@@ -19,69 +19,97 @@
 		_EmissionMap("Emission map", 2D) = "white" {}
 	}
 
-	SubShader
+	Category
 	{
 		Tags
 		{
 			"Queue" = "AlphaTest+1"
 			"IgnoreProjector" = "True"
 			"ForceNoShadowCasting" = "True"
+			"DecalSystem_FIXEDSINGLE" = "True"
+			"DecalSystem_FIXED4" = "True"
+			"DecalSystem_SCREENSPACE" = "True"
+			"DecalSystem_SKINNEDUV" = "True"
 		}
 
 		ZWrite Off
 		Offset -1,-1
 		Blend One OneMinusSrcAlpha, Zero OneMinusSrcAlpha
 
-		CGPROGRAM
-		#pragma target 3.0
-		#pragma shader_feature _ _NORMALMAP _PARALLAXMAP
-		#pragma shader_feature _ _METALLICGLOSSMAP
-		#pragma shader_feature _ _EMISSION
-		#pragma shader_feature _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _FIXED8 _SKINNEDUV
-		#pragma surface surf DecalStandard nometa vertex:vert finalgbuffer:FinalGBuffer finalcolor:FinalColor keepalpha nolightmap
-
-		#ifdef _PARALLAXMAP
-			#define _NORMALMAP
-		#endif
-
-		#ifdef _FIXED8
-			#define _FIXEDMULTI
-			#define FIXED_COUNT (8)
-		#elif defined(_FIXED4)
-			#define _FIXEDMULTI
-			#define FIXED_COUNT (4)
-		#endif
-
-		#include "DecalSystem.cginc"
-        ENDCG
-
-		Pass
+		SubShader
 		{
-			Name "DEFERRED"
-			Tags { "LightMode" = "Deferred" }
+			Tags
+			{
+				"DecalSystem_FIXED8" = "True"
+				"DecalSystem_SKINNEDBUFFER" = "True"
+			}
 
-			ZWrite Off
-			Offset -1,-1
-			Blend Zero One, One One 
-			
 			CGPROGRAM
-			#pragma target 3.0
-			#pragma multi_compile _ _PARALLAXMAP
-			#pragma multi_compile _ _METALLICGLOSSMAP
-			#pragma multi_compile _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _FIXED8 _SKINNEDUV
-			#pragma vertex SmoothnessVert
-			#pragma fragment SmoothnessFrag
-
-			#ifdef _FIXED8
-				#define _FIXEDMULTI
-				#define FIXED_COUNT (8)
-			#elif defined(_FIXED4)
-				#define _FIXEDMULTI
-				#define FIXED_COUNT (4)
-			#endif
+			#pragma target 4.0
+			#pragma shader_feature _ _PARALLAXMAP _NORMALMAP // Parallax takes priority - needs to be first
+			#pragma shader_feature _ _METALLICGLOSSMAP
+			#pragma shader_feature _ _EMISSION
+			#pragma shader_feature _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV _FIXED8 _SKINNEDBUFFER
+			#pragma surface surf DecalStandard nometa vertex:vert finalgbuffer:FinalGBuffer finalcolor:FinalColor keepalpha nolightmap
 
 			#include "DecalSystem.cginc"
 			ENDCG
+
+			Pass
+			{
+				Name "DEFERRED"
+				Tags { "LightMode" = "Deferred" }
+
+				ZWrite Off
+				Offset -1,-1
+				Blend Zero One, One One 
+			
+				CGPROGRAM
+				#pragma target 4.0
+				#pragma shader_feature _ _PARALLAXMAP
+				#pragma shader_feature _ _METALLICGLOSSMAP
+				#pragma shader_feature _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV _FIXED8 _SKINNEDBUFFER
+				#pragma vertex SmoothnessVert
+				#pragma fragment SmoothnessFrag
+
+				#include "DecalSystem.cginc"
+				ENDCG
+			}
+		}
+
+		SubShader
+		{
+			CGPROGRAM
+			#pragma target 3.0
+			#pragma shader_feature _ _PARALLAXMAP _NORMALMAP
+			#pragma shader_feature _ _METALLICGLOSSMAP
+			#pragma shader_feature _ _EMISSION
+			#pragma shader_feature _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV _FIXED8 _SKINNEDBUFFER
+			#pragma surface surf DecalStandard nometa vertex:vert finalgbuffer:FinalGBuffer finalcolor:FinalColor keepalpha nolightmap
+
+			#include "DecalSystem.cginc"
+			ENDCG
+
+			Pass
+			{
+				Name "DEFERRED"
+				Tags { "LightMode" = "Deferred" }
+
+				ZWrite Off
+				Offset -1,-1
+				Blend Zero One, One One 
+			
+				CGPROGRAM
+				#pragma target 3.0
+				#pragma shader_feature _ _PARALLAXMAP
+				#pragma shader_feature _ _METALLICGLOSSMAP
+				#pragma shader_feature _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV _FIXED8 _SKINNEDBUFFER
+				#pragma vertex SmoothnessVert
+				#pragma fragment SmoothnessFrag
+
+				#include "DecalSystem.cginc"
+				ENDCG
+			}
 		}
 	}
 }

@@ -27,13 +27,13 @@ namespace DecalSystem
 		private static readonly Dictionary<Type, string> methodNames
 			= new Dictionary<Type, string>
 		{
-			{typeof (Color), "SetColor"},
-			{typeof (float), "SetFloat"},
-			{typeof (Matrix4x4), "SetMatrix"},
-			{typeof (Texture), "SetTexture"},
-			{typeof (Texture2D), "SetTexture"},
-			{typeof (Texture3D), "SetTexture"},
-			{typeof (Vector4), "SetVector"},
+			{typeof (Color),     nameof(Material.SetColor)},
+			{typeof (float),     nameof(Material.SetFloat)},
+			{typeof (Matrix4x4), nameof(Material.SetMatrix)},
+			{typeof (Texture),   nameof(Material.SetTexture)},
+			{typeof (Texture2D), nameof(Material.SetTexture)},
+			{typeof (Texture3D), nameof(Material.SetTexture)},
+			{typeof (Vector4),   nameof(Material.SetVector)},
 		};
 
 		private static readonly Dictionary<Type, PropertyActions[]> propertyActions
@@ -207,14 +207,12 @@ namespace DecalSystem
 		public virtual Material CreateMaterial(string modeString)
 		{
 			var shader = GetShaderForMode(modeString);
-			var mat = shader == null ? null : new Material(shader);
-			if (mat != null)
-			{
-				mat.name = name + (modeString == "" ? "Default" : modeString);
-				mat.EnableKeyword(modeString);
-				SetKeywords(mat);
-				CopyTo(mat);
-			}
+			if(shader == null)
+				throw new Exception($"Mode '{modeString}' not supported!");
+			var mat = new Material(shader) {name = name + (modeString == "" ? "Default" : modeString)};
+			mat.EnableKeyword(modeString);
+			SetKeywords(mat);
+			CopyTo(mat);
 			return mat;
 		}
 

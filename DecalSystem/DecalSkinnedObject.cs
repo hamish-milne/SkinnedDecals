@@ -32,7 +32,7 @@ namespace DecalSystem
 		protected UvChannel uvChannels = ~UvChannel.Uv1A;
 
 		[SerializeField]
-		protected List<DecalChannel> channels = new List<DecalChannel>();
+		protected List<SkinnedDecalChannel> channels = new List<SkinnedDecalChannel>();
 
 		private SkinnedMeshRenderer skinnedRenderer;
 		private int[][] triangleCache;
@@ -87,58 +87,55 @@ namespace DecalSystem
 			useBuffer;
 
 		public bool UseCommandBuffer =>
-			DecalRenderer == SkinnedRenderer &&
+			GetDecalRenderer() == SkinnedRenderer &&
 			TryUseCommandBuffer;
 
-		public SkinnedMeshRenderer DecalRenderer
+		public SkinnedMeshRenderer GetDecalRenderer()
 		{
-			get
-			{
-				if (decalRenderer != null)
-					return decalRenderer;
-				// If this renderer has only one submesh, we can add decal commands to the material list
-				if (SkinnedRenderer.sharedMesh.subMeshCount <= 1 ||
-					// Otherwise, we'll need to make a new renderer if the forward path is being used,
-					// OR buffers aren't supported
-					(!DecalManager.Current.RequiresRenderingPath(RenderingPath.Forward) && useBuffer))
-				{
-					decalRenderer = SkinnedRenderer;
-				}
-				else
-				{
-					// First try to find an existing decal renderer...
-					var rTransform = SkinnedRenderer.transform.Find(DecalRendererName);
-					if (rTransform == null)
-					{
-						var newObj = new GameObject(DecalRendererName) {hideFlags = HideFlags.HideAndDontSave};
-						rTransform = newObj.transform;
-						rTransform.parent = SkinnedRenderer.transform;
-					}
-					decalRenderer = rTransform.GetComponent<SkinnedMeshRenderer>();
-					// Failing that, make a new one
-					if (decalRenderer == null)
-					{
-						decalRenderer = rTransform.gameObject.AddComponent<SkinnedMeshRenderer>();
-						// Merge submeshes into one, allowing materials to just be put into one big list
-						if (mergedMesh == null)
-						{
-							var oldMesh = SkinnedRenderer.sharedMesh;
-							mergedMesh = Instantiate(oldMesh);
-							mergedMesh.subMeshCount = 1;
-							mergedMesh.SetTriangles(oldMesh.triangles, 0);
-						}
-						decalRenderer.sharedMesh = mergedMesh;
-						decalRenderer.sharedMaterials = new Material[0];
-						// In theory, the following can change at any time, so TODO: make sure these stay updated
-						decalRenderer.bones = SkinnedRenderer.bones;
-						decalRenderer.rootBone = SkinnedRenderer.rootBone;
-						decalRenderer.localBounds = SkinnedRenderer.localBounds;
-						decalRenderer.quality = SkinnedRenderer.quality;
-						decalRenderer.updateWhenOffscreen = SkinnedRenderer.updateWhenOffscreen;
-					}
-				}
+			if (decalRenderer != null)
 				return decalRenderer;
+			// If this renderer has only one submesh, we can add decal commands to the material list
+			if (SkinnedRenderer.sharedMesh.subMeshCount <= 1 ||
+			    // Otherwise, we'll need to make a new renderer if the forward path is being used,
+			    // OR buffers aren't supported
+			    (!DecalManager.Current.RequiresRenderingPath(RenderingPath.Forward) && useBuffer))
+			{
+				decalRenderer = SkinnedRenderer;
 			}
+			else
+			{
+				// First try to find an existing decal renderer...
+				var rTransform = SkinnedRenderer.transform.Find(DecalRendererName);
+				if (rTransform == null)
+				{
+					var newObj = new GameObject(DecalRendererName) {hideFlags = HideFlags.HideAndDontSave};
+					rTransform = newObj.transform;
+					rTransform.parent = SkinnedRenderer.transform;
+				}
+				decalRenderer = rTransform.GetComponent<SkinnedMeshRenderer>();
+				// Failing that, make a new one
+				if (decalRenderer == null)
+				{
+					decalRenderer = rTransform.gameObject.AddComponent<SkinnedMeshRenderer>();
+					// Merge submeshes into one, allowing materials to just be put into one big list
+					if (mergedMesh == null)
+					{
+						var oldMesh = SkinnedRenderer.sharedMesh;
+						mergedMesh = Instantiate(oldMesh);
+						mergedMesh.subMeshCount = 1;
+						mergedMesh.SetTriangles(oldMesh.triangles, 0);
+					}
+					decalRenderer.sharedMesh = mergedMesh;
+					decalRenderer.sharedMaterials = new Material[0];
+					// In theory, the following can change at any time, so TODO: make sure these stay updated
+					decalRenderer.bones = SkinnedRenderer.bones;
+					decalRenderer.rootBone = SkinnedRenderer.rootBone;
+					decalRenderer.localBounds = SkinnedRenderer.localBounds;
+					decalRenderer.quality = SkinnedRenderer.quality;
+					decalRenderer.updateWhenOffscreen = SkinnedRenderer.updateWhenOffscreen;
+				}
+			}
+			return decalRenderer;
 		}
 
 		public override Bounds Bounds => SkinnedRenderer.bounds;
@@ -158,7 +155,7 @@ namespace DecalSystem
 		}
 
 		[Serializable]
-		protected class DecalChannel : DecalInstance, IDisposable
+		protected class SkinnedDecalChannel : DecalInstance, IDisposable
 		{
 			public int submeshMask;
 			public Material material;
@@ -335,7 +332,7 @@ namespace DecalSystem
 				}
 			}
 
-			public DecalChannel(DecalSkinnedObject obj, DecalMaterial decal, int count, UvChannel channel = 0)
+			public SkinnedDecalChannel(DecalSkinnedObject obj, DecalMaterial decal, int count, UvChannel channel = 0)
 			{
 				this.obj = obj;
 				this.decal = decal;
@@ -344,7 +341,7 @@ namespace DecalSystem
 			}
 
 			// Default constructor to allow serialization
-			public DecalChannel()
+			public SkinnedDecalChannel()
 			{
 			}
 
@@ -376,13 +373,13 @@ namespace DecalSystem
 				if (!UseCommandBuffer)
 				{
 					foreach (var obj in channels)
-						obj.AddMaterial(DecalRenderer);
+						obj.AddMaterial(GetDecalRenderer());
 					ClearData();
 				}
 			}
 		}
 
-		protected DecalChannel CreateChannel(DecalMaterial decal, int submesh)
+		protected SkinnedDecalChannel CreateChannel(DecalMaterial decal, int submesh)
 		{
 			bool decalUseBuffers = decal.IsModeSupported(SkinnedBuffer);
 			if (channels.Count == 0)
@@ -393,10 +390,10 @@ namespace DecalSystem
 				return null;
 			}
 			Profiler.BeginSample("Create channel");
-			DecalChannel ret = null;
+			SkinnedDecalChannel ret = null;
 			if (useBuffer)
 			{
-				ret = new DecalChannel(this, decal, Mesh.vertexCount);
+				ret = new SkinnedDecalChannel(this, decal, Mesh.vertexCount);
 			}
 			else
 			{
@@ -404,9 +401,9 @@ namespace DecalSystem
 				for (int i = 0; i < numUvChannels; i++)
 				{
 					var c = (UvChannel)(1 << i);
-					if ((uvChannels & c) != 0 || DecalRenderer != SkinnedRenderer)
+					if ((uvChannels & c) != 0 || GetDecalRenderer() != SkinnedRenderer)
 					{
-						ret = new DecalChannel(this, decal, Mesh.vertexCount, c);
+						ret = new SkinnedDecalChannel(this, decal, Mesh.vertexCount, c);
 						break;
 					}
 				}
@@ -416,7 +413,7 @@ namespace DecalSystem
 				channels.Add(ret);
 				ret.Refresh();
 				if(!UseCommandBuffer)
-					ret.AddMaterial(DecalRenderer);
+					ret.AddMaterial(GetDecalRenderer());
 			}
 			Profiler.EndSample();
 			return ret;
@@ -461,8 +458,8 @@ namespace DecalSystem
 			return newC;
 		}
 
-		private const int deferredBasePass = 2;
-		private const int deferredSmoothnessPass = 3;
+		private const int DeferredBasePass = 2;
+		private const int DeferredSmoothnessPass = 3;
 
 		protected override void GetDeferredData(out MeshData[] meshData, out RendererData[] rendererData)
 		{
@@ -482,10 +479,10 @@ namespace DecalSystem
 								renderer = SkinnedRenderer,
 								material = c.material,
 								submesh = i,
-								pass = deferredBasePass
+								pass = DeferredBasePass
 							};
 							var rd2 = rd1;
-							rd2.pass = deferredSmoothnessPass;
+							rd2.pass = DeferredSmoothnessPass;
 							return new[] {rd1, rd2};
 						})).ToArray();
 		}

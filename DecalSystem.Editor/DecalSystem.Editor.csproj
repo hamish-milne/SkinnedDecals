@@ -34,15 +34,16 @@
     <Compile Include="DecalProjectorEditor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="DecalVariantCollector.cs" />
+    <Compile Include="UseProperty.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="UnityEditor">
-      <HintPath>..\..\..\..\..\Program Files\Unity 5.5\Editor\Data\Managed\UnityEditor.dll</HintPath>
+      <HintPath>..\UnityEditor.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>..\..\..\..\..\Program Files\Unity 5.5\Editor\Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>..\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>

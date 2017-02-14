@@ -135,5 +135,11 @@ namespace DecalSystem.Editor
 			SetupMaterialEditor();
 			materialEditor?.DefaultPreviewSettingsGUI();
 		}
+
+		public override Texture2D RenderStaticPreview(string assetPath, Object[] subAssets, int width, int height)
+		{
+			SetupMaterialEditor();
+			return materialEditor?.RenderStaticPreview(assetPath, subAssets, width, height);
+		}
 	}
 }
