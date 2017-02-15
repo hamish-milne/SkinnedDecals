@@ -26,6 +26,7 @@
 			"Queue" = "AlphaTest+1"
 			"IgnoreProjector" = "True"
 			"ForceNoShadowCasting" = "True"
+			"DecalSystem_" = "True"
 			"DecalSystem_FIXEDSINGLE" = "True"
 			"DecalSystem_FIXED4" = "True"
 			"DecalSystem_SCREENSPACE" = "True"

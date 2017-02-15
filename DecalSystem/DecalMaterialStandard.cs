@@ -56,7 +56,7 @@ namespace DecalSystem
 		{
 			if (supportedKeywords == null)
 			{
-				var mat = new Material(shaderInstance);
+				var mat = new Material(ShaderInstance);
 				supportedKeywords = new HashSet<string>(new []
 				{
 					"_",

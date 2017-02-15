@@ -57,7 +57,7 @@ namespace DecalSystem
 			return (dm, m) =>
 			{
 				var value = field.GetValue(dm);
-				if (value is UnityEngine.Object && value.Equals(null))
+				if (value == null || value is UnityEngine.Object && value.Equals(null))
 					return;
 				InvokeSetMethod(setter, m, name, value);
 			};

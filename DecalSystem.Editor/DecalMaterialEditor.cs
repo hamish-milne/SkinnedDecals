@@ -100,21 +100,29 @@ namespace DecalSystem.Editor
 		// Create preview materials and an associated editor
 		void SetupMaterialEditor()
 		{
-			if (materials == null)
+			try
 			{
-				var objs = targets.Cast<DecalMaterial>().ToArray();
-				materials = objs
-					.Select(m => m.GetMaterial(""))
-					.ToArray();
-				// In theory, GetMaterial can return null at any point
-				materials = materials.Any(m => m == null) ?
-					null : materials.Select(Instantiate).ToArray();
+				if (materials == null)
+				{
+					var objs = targets.Cast<DecalMaterial>().ToArray();
+					materials = objs
+						.Select(m => m.GetMaterial(""))
+						.ToArray();
+					// In theory, GetMaterial can return null at any point
+					materials = materials.Any(m => m == null)
+						? null
+						: materials.Select(Instantiate).ToArray();
+				}
+				if (materials != null && materialEditor == null)
+					// ReSharper disable once CoVariantArrayConversion
+					materialEditor = (MaterialEditor) CreateEditor(materials);
+				if (drawPreview == null)
+					drawPreview = typeof (ObjectPreview).GetMethod("DrawPreview", BindingFlags.Static | BindingFlags.NonPublic);
 			}
-			if (materials != null && materialEditor == null)
-				// ReSharper disable once CoVariantArrayConversion
-				materialEditor = (MaterialEditor)CreateEditor(materials);
-			if (drawPreview == null)
-				drawPreview = typeof (ObjectPreview).GetMethod("DrawPreview", BindingFlags.Static | BindingFlags.NonPublic);
+			catch
+			{
+				// ignored
+			}
 		}
 
 		// Make sure that multi-editing DecalMaterials draws each material separately..
