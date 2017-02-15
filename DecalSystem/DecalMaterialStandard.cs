@@ -6,6 +6,23 @@ using static DecalSystem.ShaderKeywords;
 
 namespace DecalSystem
 {
+	public struct DecalObjectData
+	{
+		public Renderer renderer;
+		public Mesh mesh;
+		public Material material;
+		public MaterialPropertyBlock properties;
+		public Transform transform;
+		public Matrix4x4 matrix;
+	}
+
+	public struct DecalRenderCommand
+	{
+		public DecalObjectData objectData;
+		public int[] passes;
+		public DepthTextureMode depthTextureMode;
+	}
+
 	/// <summary>
 	/// Draws decals using the Standard lighting model
 	/// </summary>
@@ -71,6 +88,19 @@ namespace DecalSystem
 			if (string.IsNullOrEmpty(mode))
 				mode = "_";
 			return supportedKeywords.Contains(mode) ? shaderInstance : null;
+		}
+
+		// Both passes are named 'DEFERRED', so we have to enumerate them
+		private static readonly int[] deferredPasses =
+		{
+			2, // Main Deferred pass
+			3  // Smoothness blending
+		};
+		public override int[] GetKnownPasses(RenderingPath renderingPath)
+		{
+			if (renderingPath == RenderingPath.DeferredShading)
+				return deferredPasses;
+			return base.GetKnownPasses(renderingPath);
 		}
 	}
 }

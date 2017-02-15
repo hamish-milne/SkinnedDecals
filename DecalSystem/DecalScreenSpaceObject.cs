@@ -80,6 +80,7 @@ namespace DecalSystem
 				.Where(obj => obj.Enabled)
 				.Select(obj => new MeshData
 			{
+				instance = obj,
 				material = obj.DecalMaterial.GetMaterial(ShaderKeywords.ScreenSpace),
 				matrix = obj.matrix,
 				mesh = Mesh

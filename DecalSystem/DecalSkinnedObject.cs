@@ -458,9 +458,6 @@ namespace DecalSystem
 			return newC;
 		}
 
-		private const int DeferredBasePass = 2;
-		private const int DeferredSmoothnessPass = 3;
-
 		protected override void GetDeferredData(out MeshData[] meshData, out RendererData[] rendererData)
 		{
 			foreach (var c in channels)
@@ -472,19 +469,13 @@ namespace DecalSystem
 					.Where(c => c.Enabled)
 					.SelectMany(c => Enumerable.Range(0, Mesh.subMeshCount)
 						.Where(i => (c.submeshMask & (1 << i)) != 0)
-						.SelectMany(i =>
-						{
-							var rd1 = new RendererData
+						.Select(i => new RendererData
 							{
 								renderer = SkinnedRenderer,
 								material = c.material,
-								submesh = i,
-								pass = DeferredBasePass
-							};
-							var rd2 = rd1;
-							rd2.pass = DeferredSmoothnessPass;
-							return new[] {rd1, rd2};
-						})).ToArray();
+								submesh = i
+							}
+						)).ToArray();
 		}
 
 

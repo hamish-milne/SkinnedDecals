@@ -280,6 +280,8 @@ void surf(Input IN, inout DecalSurfaceOutputStandard o)
 	o.Metallic /= o.Alpha;
 	o.Emission /= o.Alpha;
 #else
+
+
 	float2 uv;
 	CalculateUv(IN, uv);
 

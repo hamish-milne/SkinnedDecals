@@ -31,7 +31,12 @@ namespace DecalSystem
 			/// <summary>
 			/// The list of <c>DrawMesh</c> commands
 			/// </summary>
-			public readonly List<MeshData> meshData = new List<MeshData>(); 
+			public readonly List<MeshData> meshData = new List<MeshData>();
+
+			/// <summary>
+			/// The list of meshes for which <c>DrawMesh</c> cannot be used
+			/// </summary>
+			public readonly List<MeshData> meshDataForBuffer = new List<MeshData>();
 		}
 
 		/// <summary>
@@ -125,13 +130,32 @@ namespace DecalSystem
 				case RenderingPath.Forward:
 					return CameraEvent.AfterForwardOpaque;
 				case RenderingPath.DeferredShading:
-					return CameraEvent.AfterGBuffer;
+					return CameraEvent.BeforeReflections;
+					//CameraEvent.AfterGBuffer;
 				case RenderingPath.DeferredLighting:
 					return CameraEvent.AfterFinalPass;
 				case RenderingPath.VertexLit:
 					return CameraEvent.BeforeImageEffects;
 				default:
 					throw new ArgumentOutOfRangeException();
+			}
+		}
+
+		private static readonly RenderTargetIdentifier[] gBuffer = new[]
+		{
+			BuiltinRenderTextureType.GBuffer0,
+			BuiltinRenderTextureType.GBuffer1,
+			BuiltinRenderTextureType.GBuffer2,
+			BuiltinRenderTextureType.GBuffer3
+		}.Select(b => new RenderTargetIdentifier(b)).ToArray();
+		private static readonly RenderTargetIdentifier depth =
+			new RenderTargetIdentifier(BuiltinRenderTextureType.CurrentActive);
+
+		protected virtual void SetupCommandBuffer(CameraData cd, CameraEvent evt, CommandBuffer cmd)
+		{
+			if (evt == CameraEvent.BeforeReflections)
+			{
+				cmd.SetRenderTarget(gBuffer, depth);
 			}
 		}
 
@@ -253,7 +277,12 @@ namespace DecalSystem
 			}
 			return cd.command;
 		}
-		
+
+		protected virtual bool CanUseDrawMesh(RenderingPath rp, MeshData md, RenderPathData rpd)
+		{
+			return !(rp == RenderingPath.DeferredShading && rpd.RequiresDepthTexture);
+		}
+
 		protected void RebuildCameraDataIfNeeded()
 		{
 			if (CheckCameras())
@@ -274,7 +303,11 @@ namespace DecalSystem
 							continue;
 						requireDepthTexture |= rpd.RequiresDepthTexture;
 						if (rpd.MeshData != null)
-							cd.meshData.AddRange(rpd.MeshData);
+							foreach (var md in rpd.MeshData)
+								if (CanUseDrawMesh(cam.actualRenderingPath, md, rpd))
+									cd.meshData.Add(md);
+								else
+									cd.meshDataForBuffer.Add(md);
 					}
 					cam.depthTextureMode = requireDepthTexture ? DepthTextureMode.Depth : DepthTextureMode.None;
 					list.Add(cd);
@@ -282,24 +315,56 @@ namespace DecalSystem
 				cameraData = list.ToArray();
 			}
 		}
-
+		
+		// TODO: Don't do this if no manual culling
 		protected void RebuildVisibleCommandBuffers()
 		{
 			var activeObjects = DecalObject.ActiveObjects;
 			foreach (var cd in cameraData)
 			{
 				cd.command?.Clear();
+				bool setup = false;
 				// ReSharper disable once ForCanBeConvertedToForeach
 				for (int i = 0; i < activeObjects.Count; i++)
 				{
 					var obj = activeObjects[i];
 					var rpd = obj.GetRenderPathData(cd.camera.actualRenderingPath);
-					if (rpd?.RendererData != null && (!obj.UseManualCulling ||
-						toRender.Contains(new KeyValuePair<DecalObject, Camera>(obj, cd.camera))))
+					if ((rpd?.RendererData == null && cd.meshDataForBuffer.Count <= 0) ||
+					    (obj.UseManualCulling && !toRender.Contains(new KeyValuePair<DecalObject, Camera>(obj, cd.camera))))
+						continue;
+					var cmd = GetCommandBuffer(cd);
+					if (!setup)
 					{
-						var cmd = GetCommandBuffer(cd);
+						SetupCommandBuffer(cd, GetCameraEvent(cd.camera.actualRenderingPath), cmd);
+						setup = true;
+					}
+					if(rpd?.RendererData != null)
 						foreach (var rd in rpd.RendererData)
-							cmd.DrawRenderer(rd.renderer, rd.material, rd.submesh, rd.pass);
+						{
+							var passes = rd.instance?.DecalMaterial?.GetKnownPasses(cd.camera.actualRenderingPath);
+							if (passes == null)
+							{
+								Debug.LogError($"Unable to determine pass order for decal in {obj}", obj);
+								obj.enabled = false;
+								break;
+							}
+							foreach(var pass in passes)
+								cmd.DrawRenderer(rd.renderer, rd.material, rd.submesh, pass);
+						}
+					foreach (var md in cd.meshDataForBuffer)
+					{
+						var matrix = md.matrix;
+						if (md.transform != null)
+							matrix = matrix * md.transform.localToWorldMatrix;
+						var passes = md.instance?.DecalMaterial?.GetKnownPasses(cd.camera.actualRenderingPath);
+						if (passes == null)
+						{
+							Debug.LogError($"Unable to determine pass order for decal in {obj}", obj);
+							obj.enabled = false;
+							break;
+						}
+						foreach (var pass in passes)
+							cmd.DrawMesh(md.mesh, matrix, md.material, md.submesh, pass, md.materialPropertyBlock);
 					}
 				}
 			}

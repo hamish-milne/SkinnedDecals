@@ -19,6 +19,8 @@ namespace DecalSystem
 	/// </remarks>
 	public struct MeshData
 	{
+		public DecalInstance instance;
+
 		/// <summary>
 		/// The mesh to draw
 		/// </summary>
@@ -61,6 +63,8 @@ namespace DecalSystem
 	/// </remarks>
 	public struct RendererData
 	{
+		public DecalInstance instance;
+
 		/// <summary>
 		/// The renderer to draw
 		/// </summary>
@@ -75,11 +79,6 @@ namespace DecalSystem
 		/// The material to use
 		/// </summary>
 		public Material material;
-
-		/// <summary>
-		/// The material pass to use (-1 for all passes)
-		/// </summary>
-		public int pass;
 	}
 
 	/// <summary>

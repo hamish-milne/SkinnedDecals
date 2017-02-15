@@ -171,6 +171,7 @@ namespace DecalSystem
 		/// <param name="properties"></param>
 		public virtual void CopyTo(MaterialPropertyBlock properties)
 		{
+			// TODO: Clear here?
 			foreach (var prop in GetPropertyActions(GetType()))
 				prop.propertyBlockAction(this, properties);
 		}
@@ -258,5 +259,17 @@ namespace DecalSystem
 		}
 
 		public abstract Shader GetShaderForMode(string mode);
+
+		/// <summary>
+		/// For some rendering paths (i.e. deferred), we can run specific shader passes without requiring
+		/// properties set per-pass. This function retrieves those pass indices, in order, or <c>null</c>
+		/// if this isn't known (i.e. for forward)
+		/// </summary>
+		/// <param name="renderingPath"></param>
+		/// <returns></returns>
+		public virtual int[] GetKnownPasses(RenderingPath renderingPath)
+		{
+			return null;
+		}
 	}
 }

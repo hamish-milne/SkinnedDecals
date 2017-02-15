@@ -47,6 +47,9 @@
 
 			CGPROGRAM
 			#pragma target 4.0
+			// For some reason Metal reports as SM4, when it really isn't
+			// Might as well exclude it rather than wasting time trying to compile. If Metal gets better try commenting this out.
+			#pragma exclude_renderers metal 
 			#pragma shader_feature _ _PARALLAXMAP _NORMALMAP // Parallax takes priority - needs to be first
 			#pragma shader_feature _ _METALLICGLOSSMAP
 			#pragma shader_feature _ _EMISSION
@@ -67,6 +70,7 @@
 			
 				CGPROGRAM
 				#pragma target 4.0
+				#pragma exclude_renderers metal 
 				#pragma shader_feature _ _PARALLAXMAP
 				#pragma shader_feature _ _METALLICGLOSSMAP
 				#pragma shader_feature _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV _FIXED8 _SKINNEDBUFFER
