@@ -154,7 +154,7 @@ namespace DecalSystem
 	public abstract class DecalInstance
 	{
 		[SerializeField, UseProperty] protected bool enabled = true;
-		[SerializeField, UseProperty] protected DecalMaterial decal;
+		[SerializeField, UseProperty] protected DecalMaterial decalMaterial;
 
 		/// <summary>
 		/// Whether to draw this decal or not
@@ -181,14 +181,15 @@ namespace DecalSystem
 		/// </summary>
 		public virtual DecalMaterial DecalMaterial
 		{
-			get { return decal; }
-			set { decal = value; DecalObject.Refresh(RefreshAction.ChangeInstanceMaterial); }
+			get { return decalMaterial; }
+			set { decalMaterial = value; DecalObject.Refresh(RefreshAction.ChangeInstanceMaterial); }
 		}
 	}
 
 	/// <summary>
 	/// An object that can receive decals.
 	/// </summary>
+	[ExecuteInEditMode]
 	public abstract class DecalObject : MonoBehaviour
 	{
 		public abstract string[] RequiredModes { get; }
@@ -198,7 +199,7 @@ namespace DecalSystem
 
 		private static void GetActiveObjects()
 		{
-			if (activeObjects != null) return;
+			if (Application.isPlaying && activeObjects != null) return;
 			activeObjects = FindObjectsOfType<DecalObject>().Where(obj => obj.enabled).ToList();
 			activeObjectsReadonly = new ReadOnlyCollection<DecalObject>(activeObjects);
 		}
@@ -343,6 +344,8 @@ namespace DecalSystem
 
 		protected virtual void OnDisable()
 		{
+			if(!Application.isPlaying)
+				GetActiveObjects();
 			if (activeObjects != null)
 			{
 				if(activeObjects.Remove(this))

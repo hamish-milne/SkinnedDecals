@@ -440,7 +440,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 430241327}
   m_LocalRotation: {x: -0, y: 0.41447377, z: -0, w: 0.91006124}
-  m_LocalPosition: {x: 0.849, y: 0.916, z: 0.142}
+  m_LocalPosition: {x: -1.912, y: 1.368, z: -2.26}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -553,7 +553,47 @@ MonoBehaviour:
   m_Script: {fileID: -423928732, guid: 985b4d1823d2b41469085ab826add42f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  instances: []
+  instances:
+  - enabled: 1
+    decalMaterial: {fileID: 11400000, guid: 627d98932191643449a766d37052ef88, type: 2}
+    obj: {fileID: 486009661}
+    matrix:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: -0.143
+      e10: 0
+      e11: 0.7071068
+      e12: -0.70710677
+      e13: -0.135
+      e20: 0
+      e21: 0.70710677
+      e22: 0.7071068
+      e23: 0.395
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+  - enabled: 1
+    decalMaterial: {fileID: 11400000, guid: 627d98932191643449a766d37052ef88, type: 2}
+    obj: {fileID: 486009661}
+    matrix:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: -1.21
+      e10: 0
+      e11: 0.7071068
+      e12: -0.70710677
+      e13: 1.458
+      e20: 0
+      e21: 0.70710677
+      e22: 0.7071068
+      e23: 0.43
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
   bounds:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0.5, y: 0.5, z: 0.5}
@@ -593,20 +633,20 @@ MonoBehaviour:
   m_Script: {fileID: 1917464271, guid: 985b4d1823d2b41469085ab826add42f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  renderSceneCamera: 0
+  renderSceneCamera: 1
 --- !u!4 &546740850
 Transform:
   m_ObjectHideFlags: 0
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 546740848}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.231, y: 1.2666, z: 0.0459}
-  m_LocalScale: {x: 0.1, y: 0.1, z: 0.1}
+  m_LocalRotation: {x: 0.38268343, y: 0, z: 0, w: 0.92387956}
+  m_LocalPosition: {x: -1.21, y: 1.458, z: 0.43}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 4
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 45, y: 0, z: 0}
 --- !u!114 &546740851
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -618,7 +658,7 @@ MonoBehaviour:
   m_Script: {fileID: -828303001, guid: 985b4d1823d2b41469085ab826add42f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  decal: {fileID: 0}
+  decal: {fileID: 11400000, guid: 627d98932191643449a766d37052ef88, type: 2}
   objectFilterMode: 0
   objectFilter: []
   materialFilterMode: 0
@@ -725,7 +765,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 735162451}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.727, y: 0.721, z: 0}
+  m_LocalPosition: {x: 1.533, y: 0.721, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -777,6 +817,71 @@ Transform:
 Transform:
   m_PrefabParentObject: {fileID: 400182, guid: b235179bd2a63d1468dd430670338c55, type: 3}
   m_PrefabInternal: {fileID: 997412427}
+--- !u!21 &815262852
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_Name: TestDecal_FIXEDSINGLE
+  m_Shader: {fileID: 4800000, guid: 750aca623e2b86247859ddf14816223f, type: 3}
+  m_ShaderKeywords: _FIXEDSINGLE _NORMALMAP
+  m_LightmapFlags: 5
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  m_SavedProperties:
+    serializedVersion: 2
+    m_TexEnvs:
+    - first:
+        name: _BumpMap
+      second:
+        m_Texture: {fileID: 2800000, guid: 3b5b7be0f2332c24f89a2af018daa62d, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - first:
+        name: _EmissionMap
+      second:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - first:
+        name: _MainTex
+      second:
+        m_Texture: {fileID: 2800000, guid: 7c5c3313ecb5b8142a446c2304d0dc2b, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - first:
+        name: _MetallicGlossMap
+      second:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - first:
+        name: _ParallaxMap
+      second:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Floats:
+    - first:
+        name: _BumpScale
+      second: 1
+    - first:
+        name: _Glossiness
+      second: 1
+    - first:
+        name: _Metallic
+      second: 1
+    - first:
+        name: _Parallax
+      second: 0.08
+    m_Colors:
+    - first:
+        name: _Color
+      second: {r: 1, g: 1, b: 1, a: 1}
+    - first:
+        name: _EmissionColor
+      second: {r: 0, g: 0, b: 0, a: 1}
 --- !u!4 &844206129 stripped
 Transform:
   m_PrefabParentObject: {fileID: 400180, guid: b235179bd2a63d1468dd430670338c55, type: 3}
@@ -1102,7 +1207,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!23 &1470084315
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -1159,13 +1264,13 @@ Transform:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1470084314}
-  m_LocalRotation: {x: 0.069943786, y: -0.56895, z: 0.009817177, w: 0.81933355}
-  m_LocalPosition: {x: -0.457, y: 0.05, z: 0.497}
+  m_LocalRotation: {x: 0.5938931, y: -0.42055827, z: 0.38331607, w: 0.5687623}
+  m_LocalPosition: {x: -0.381, y: -0.06, z: 0.664}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 9
-  m_LocalEulerAnglesHint: {x: 7.2260003, y: -69.784004, z: -3.67}
+  m_LocalEulerAnglesHint: {x: 86.359, y: -158.67201, z: -89.351006}
 --- !u!4 &1494921710 stripped
 Transform:
   m_PrefabParentObject: {fileID: 400178, guid: b235179bd2a63d1468dd430670338c55, type: 3}
@@ -1258,7 +1363,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1593965143}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.082, y: 0.98, z: 0.728}
+  m_LocalPosition: {x: -1.165, y: 1.413, z: 0.419}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 972166566}
@@ -1276,7 +1381,29 @@ MonoBehaviour:
   m_Script: {fileID: 262696476, guid: 985b4d1823d2b41469085ab826add42f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  instances: []
+  instances:
+  - enabled: 1
+    decalMaterial: {fileID: 11400000, guid: 627d98932191643449a766d37052ef88, type: 2}
+    obj: {fileID: 1593965148}
+    material: {fileID: 815262852}
+    submesh: 0
+    matrices:
+    - e00: 1
+      e01: 0
+      e02: 0
+      e03: 0.045000076
+      e10: 0
+      e11: 0.7071068
+      e12: 0.70710677
+      e13: -0.039598003
+      e20: 0
+      e21: -0.70710677
+      e22: 0.7071068
+      e23: 0.024041608
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
 --- !u!4 &1648614055 stripped
 Transform:
   m_PrefabParentObject: {fileID: 400268, guid: b235179bd2a63d1468dd430670338c55, type: 3}

@@ -93,10 +93,10 @@ namespace DecalSystem
 				return ret;
 			}
 
-			public FixedChannel(DecalFixedObject obj, DecalMaterial decal, Matrix4x4 matrix)
+			public FixedChannel(DecalFixedObject obj, DecalMaterial decalMaterial, Matrix4x4 matrix)
 			{
 				this.obj = obj;
-				this.decal = decal;
+				this.decalMaterial = decalMaterial;
 				matrices.Add(matrix);
 			}
 
@@ -142,8 +142,14 @@ namespace DecalSystem
 						ClearData();
 		}
 
+		private void Cleanup()
+		{
+			instances.RemoveAll(obj => obj.DecalMaterial == null);
+		}
+
 		protected virtual MeshData[] GetMeshData()
 		{
+			Cleanup();
 			if (instances.Count == 0 || !enabled)
 				return null;
 			return instances

@@ -1,0 +1,37 @@
+fileFormatVersion: 2
+guid: 985b4d1823d2b41469085ab826add42f
+timeCreated: 1487117248
+licenseType: Free
+PluginImporter:
+  serializedVersion: 1
+  iconMap:
+    DecalSystem.DecalFixedObject: {fileID: 2800000, guid: 4228df07e0d790f4194df98dc8c49b3d,
+      type: 3}
+    DecalSystem.DecalMaterialStandard: {fileID: 2800000, guid: 98ed3e44555edec49b1c4929bf2b2d6a,
+      type: 3}
+    DecalSystem.DecalProjector: {fileID: 2800000, guid: 34846b808d1479546821db81bf1f7bd6,
+      type: 3}
+    DecalSystem.DecalScreenSpaceObject: {fileID: 2800000, guid: 4228df07e0d790f4194df98dc8c49b3d,
+      type: 3}
+    DecalSystem.DecalSkinnedObject: {fileID: 2800000, guid: 4228df07e0d790f4194df98dc8c49b3d,
+      type: 3}
+    DecalSystem.DecalVariantCollection: {fileID: 2800000, guid: 051f51d3834077b45bd11d5de9ea0d71,
+      type: 3}
+  executionOrder: {}
+  isPreloaded: 0
+  isOverridable: 0
+  platformData:
+    Any:
+      enabled: 1
+      settings: {}
+    Editor:
+      enabled: 0
+      settings:
+        DefaultValueInitialized: true
+    WindowsStoreApps:
+      enabled: 0
+      settings:
+        CPU: AnyCPU
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

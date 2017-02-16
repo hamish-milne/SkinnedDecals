@@ -23,6 +23,8 @@ namespace DecalSystem
 			/// </summary>
 			public Camera camera;
 
+			public CameraEvent cameraEvent;
+
 			/// <summary>
 			/// The command buffer to bind, if any
 			/// </summary>
@@ -42,7 +44,7 @@ namespace DecalSystem
 		/// <summary>
 		/// Whether to draw decals on the scene camera
 		/// </summary>
-		[SerializeField] protected bool renderSceneCamera;
+		[SerializeField] protected bool renderSceneCamera = true;
 
 		private CameraData[] cameraData;
 
@@ -90,11 +92,27 @@ namespace DecalSystem
 			Current = this;
 		}
 
-		protected virtual void OnDestroy()
+		protected virtual void OnDisable()
 		{
 			if (Current == this)
 				Current = null;
-			ClearData();
+			if(cameraData != null)
+				foreach (var cd in cameraData)
+				{
+					if (cd.camera == null) return;
+					if (cd.command != null)
+					{
+						cd.camera.RemoveCommandBuffer(cd.cameraEvent, cd.command);
+						cd.command.Dispose();
+					}
+					// TODO: Figure out when we change this
+					cd.camera.depthTextureMode = DepthTextureMode.None;
+				}
+			cameraData = null;
+			cameraArray = null;
+			prevCameraArray = null;
+			prevRenderingPaths.Clear();
+			repaintRequired = true;
 		}
 
 		// Holds whether a manually culled object is rendered for each camera
@@ -151,9 +169,9 @@ namespace DecalSystem
 		private static readonly RenderTargetIdentifier depth =
 			new RenderTargetIdentifier(BuiltinRenderTextureType.CurrentActive);
 
-		protected virtual void SetupCommandBuffer(CameraData cd, CameraEvent evt, CommandBuffer cmd)
+		protected virtual void SetupCommandBuffer(CameraData cd, CommandBuffer cmd)
 		{
-			if (evt == CameraEvent.BeforeReflections)
+			if (cd.cameraEvent == CameraEvent.BeforeReflections)
 			{
 				cmd.SetRenderTarget(gBuffer, depth);
 			}
@@ -201,7 +219,7 @@ namespace DecalSystem
 		// Retrieves the camera list
 		private void GetAllCameras()
 		{
-			if (SceneCamera != null)
+			if (renderSceneCamera && SceneCamera != null)
 			{
 				if (cameraArray == null || cameraArray.Length != Camera.allCamerasCount+1)
 					cameraArray = new Camera[Camera.allCamerasCount+1];
@@ -264,11 +282,16 @@ namespace DecalSystem
 				var cmds = cd.camera.GetCommandBuffers(evt);
 				foreach(var cmd in cmds)
 					if (cmd.name == commandName)
+					{
 						cd.command = cmd;
+						cd.cameraEvent = evt;
+					}
 				if (cd.command == null)
 				{
 					cd.command = new CommandBuffer {name = commandName};
+					cd.cameraEvent = evt;
 					cd.camera.AddCommandBuffer(evt, cd.command);
+					SetupCommandBuffer(cd, cd.command);
 				}
 				else
 				{
@@ -322,8 +345,12 @@ namespace DecalSystem
 			var activeObjects = DecalObject.ActiveObjects;
 			foreach (var cd in cameraData)
 			{
-				cd.command?.Clear();
-				bool setup = false;
+				if (cd.command != null)
+				{
+					cd.command.Clear();
+					SetupCommandBuffer(cd, cd.command);
+				}
+				// Load DrawRenderer commands
 				// ReSharper disable once ForCanBeConvertedToForeach
 				for (int i = 0; i < activeObjects.Count; i++)
 				{
@@ -333,12 +360,7 @@ namespace DecalSystem
 					    (obj.UseManualCulling && !toRender.Contains(new KeyValuePair<DecalObject, Camera>(obj, cd.camera))))
 						continue;
 					var cmd = GetCommandBuffer(cd);
-					if (!setup)
-					{
-						SetupCommandBuffer(cd, GetCameraEvent(cd.camera.actualRenderingPath), cmd);
-						setup = true;
-					}
-					if(rpd?.RendererData != null)
+					if (rpd?.RendererData != null)
 						foreach (var rd in rpd.RendererData)
 						{
 							var passes = rd.instance?.DecalMaterial?.GetKnownPasses(cd.camera.actualRenderingPath);
@@ -351,21 +373,25 @@ namespace DecalSystem
 							foreach(var pass in passes)
 								cmd.DrawRenderer(rd.renderer, rd.material, rd.submesh, pass);
 						}
-					foreach (var md in cd.meshDataForBuffer)
+					
+				}
+				// Load DrawMesh commands
+				for (int i = 0; i < cd.meshDataForBuffer.Count; i++)
+				{
+					var md = cd.meshDataForBuffer[i];
+					var matrix = md.matrix;
+					if (md.transform != null)
+						matrix = matrix*md.transform.localToWorldMatrix;
+					var passes = md.instance?.DecalMaterial?.GetKnownPasses(cd.camera.actualRenderingPath);
+					if (passes == null)
 					{
-						var matrix = md.matrix;
-						if (md.transform != null)
-							matrix = matrix * md.transform.localToWorldMatrix;
-						var passes = md.instance?.DecalMaterial?.GetKnownPasses(cd.camera.actualRenderingPath);
-						if (passes == null)
-						{
-							Debug.LogError($"Unable to determine pass order for decal in {obj}", obj);
-							obj.enabled = false;
-							break;
-						}
-						foreach (var pass in passes)
-							cmd.DrawMesh(md.mesh, matrix, md.material, md.submesh, pass, md.materialPropertyBlock);
+						Debug.LogError($"Unable to determine pass order for decal with {md.instance?.DecalMaterial} material", this);
+						cd.meshDataForBuffer.Remove(md);
+						break;
 					}
+					var cmd = GetCommandBuffer(cd);
+					foreach (var pass in passes)
+						cmd.DrawMesh(md.mesh, matrix, md.material, md.submesh, pass, md.materialPropertyBlock);
 				}
 			}
 			toRender.Clear();
@@ -387,11 +413,34 @@ namespace DecalSystem
 			}
 		}
 
-		protected virtual void Update()
+		private bool repaintRequired;
+
+		public void Repaint()
 		{
+			if (!enabled) return;
 			RebuildCameraDataIfNeeded();
 			RebuildVisibleCommandBuffers();
 			DrawMeshes();
+		}
+
+		public void RepaintIfRequired()
+		{
+			if (repaintRequired)
+			{
+				Repaint();
+				repaintRequired = false;
+			}
+		}
+
+		protected virtual void OnRenderObject()
+		{
+			repaintRequired = true;
+		}
+
+		protected virtual void Update()
+		{
+			if(Application.isPlaying)
+				Repaint();
 		}
 	}
 }

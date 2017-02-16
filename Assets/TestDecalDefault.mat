@@ -51,13 +51,13 @@ Material:
       second: 1
     - first:
         name: _Glossiness
-      second: 0.862
+      second: 1
     - first:
         name: _Metallic
       second: 1
     - first:
         name: _Parallax
-      second: 0.0005
+      second: 0.08
     m_Colors:
     - first:
         name: _Color

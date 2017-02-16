@@ -335,7 +335,7 @@ namespace DecalSystem
 			public SkinnedDecalChannel(DecalSkinnedObject obj, DecalMaterial decal, int count, UvChannel channel = 0)
 			{
 				this.obj = obj;
-				this.decal = decal;
+				this.decalMaterial = decal;
 				this.channel = channel;
 				Reload(count);
 			}
@@ -505,7 +505,7 @@ namespace DecalSystem
 
 		protected virtual void OnWillRenderObject()
 		{
-			DecalManager.Current.RenderObject(this, Camera.current);
+			DecalManager.Current?.RenderObject(this, Camera.current);
 		}
 	}
 }

@@ -54,7 +54,7 @@ struct Input
 #elif defined(_SCREENSPACE)
 	float3 localCameraPos : TEXCOORD3;
 #else
-	float2 decalPos : TEXCOORD3;
+	float3 decalPos : TEXCOORD3;
 #endif
 };
 
@@ -140,7 +140,7 @@ void vert(inout appdata_full v, out Input o)
 #endif
 
 #ifdef _SKINNEDBUFFER
-	o.decalPos = _Buffer[v.id];
+	o.decalPos = float3(_Buffer[v.id], 0);
 	FIX_ORIENTATION(o.decalPos);
 #elif defined(_SKINNEDUV)
 	float2 channels[8] = {
@@ -153,7 +153,7 @@ void vert(inout appdata_full v, out Input o)
 		v.texcoord3.xy,
 		v.texcoord3.zw
 	};
-	o.decalPos = channels[_UvChannel];
+	o.decalPos = float3(channels[_UvChannel], 0);
 	FIX_ORIENTATION(o.decalPos);
 #elif defined(_FIXEDSINGLE)
 	o.decalPos = GetDecalPos(_Projector, v.vertex);
@@ -179,7 +179,7 @@ void vert(inout appdata_full v, out Input o)
 	o.localCameraPos = mul(_World2Object, float4(_WorldSpaceCameraPos, 1));
 	o.ray = v.vertex - o.localCameraPos;
 #else
-	o.decalPos = v.texcoord.xy;
+	o.decalPos = v.texcoord.xyz;
 #endif
 }
 

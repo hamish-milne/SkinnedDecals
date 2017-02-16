@@ -45,5 +45,28 @@ namespace DecalSystem.Editor
 			GUILayout.FlexibleSpace();
 			GUILayout.EndHorizontal();
 		}
+
+		[InitializeOnLoadMethod]
+		protected static void AddEditorUpdate()
+		{
+			int repaintOnDisable = 0;
+			EditorApplication.update += () =>
+			{
+				if (DecalManager.Current == null)
+				{
+					// Repaint 2 frames after decals are disabled
+					if (repaintOnDisable > 0)
+					{
+						SceneView.RepaintAll();
+						repaintOnDisable--;
+					}
+				}
+				else
+				{
+					DecalManager.Current.RepaintIfRequired();
+					repaintOnDisable = 2;
+				}
+			};
+		}
 	}
 }

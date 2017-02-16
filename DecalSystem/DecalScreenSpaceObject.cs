@@ -22,7 +22,7 @@ namespace DecalSystem
 			public Instance(DecalScreenSpaceObject obj, DecalMaterial decal, Matrix4x4 matrix)
 			{
 				this.obj = obj;
-				this.decal = decal;
+				this.decalMaterial = decal;
 				this.matrix = matrix;
 			}
 		}
@@ -74,8 +74,14 @@ namespace DecalSystem
 
 		protected override bool RequireDepthTexture => true;
 
+		private void Cleanup()
+		{
+			instances.RemoveAll(obj => obj.DecalMaterial == null);
+		}
+
 		protected virtual MeshData[] GetMeshData()
 		{
+			Cleanup();
 			return instances
 				.Where(obj => obj.Enabled)
 				.Select(obj => new MeshData

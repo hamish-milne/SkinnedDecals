@@ -14,11 +14,11 @@ MonoBehaviour:
   defaultMaterial: {fileID: 0}
   color: {r: 1, g: 1, b: 1, a: 1}
   emission: {r: 0, g: 0, b: 0, a: 1}
-  smoothness: 0
-  metallic: 0
-  parallax: 0
-  albedo: {fileID: 0}
-  normal: {fileID: 0}
+  smoothness: 1
+  metallic: 1
+  parallax: 0.08
+  albedo: {fileID: 2800000, guid: 7c5c3313ecb5b8142a446c2304d0dc2b, type: 3}
+  normal: {fileID: 2800000, guid: 3b5b7be0f2332c24f89a2af018daa62d, type: 3}
   roughnessMap: {fileID: 0}
   parallaxMap: {fileID: 0}
   emissionMap: {fileID: 0}
