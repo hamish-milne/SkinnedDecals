@@ -10,6 +10,16 @@ namespace DecalSystem
 	{
 	}
 
+	public class RefreshOnChangeAttribute : PropertyAttribute
+	{
+		public RefreshAction RefreshAction { get; set; }
+
+		public RefreshOnChangeAttribute(RefreshAction refreshAction)
+		{
+			RefreshAction = refreshAction;
+		}
+	}
+
 	/// <summary>
 	/// Represents a mesh item that will be rendered with <c>Graphics.DrawMesh</c>
 	/// </summary>
@@ -153,8 +163,10 @@ namespace DecalSystem
 	[Serializable]
 	public abstract class DecalInstance
 	{
-		[SerializeField, UseProperty] protected bool enabled = true;
-		[SerializeField, UseProperty] protected DecalMaterial decalMaterial;
+		[SerializeField, RefreshOnChange(RefreshAction.EnableDisable)]
+		protected bool enabled = true;
+		[SerializeField, RefreshOnChange(RefreshAction.ChangeInstanceMaterial)]
+		protected DecalMaterial decalMaterial;
 
 		/// <summary>
 		/// Whether to draw this decal or not

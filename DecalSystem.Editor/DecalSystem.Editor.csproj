@@ -30,6 +30,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="RefreshOnChangeDrawer.cs" />
     <Compile Include="DecalMaterialEditor.cs" />
     <Compile Include="DecalProjectorEditor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
