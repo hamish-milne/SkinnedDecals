@@ -184,7 +184,13 @@ namespace DecalSystem
 		{
 			if(cameraData != null)
 				foreach (var cd in cameraData)
-					cd.command?.Dispose();
+				{
+					if (cd.command != null)
+					{
+						cd.camera.RemoveCommandBuffer(cd.cameraEvent, cd.command);
+						cd.command.Dispose();
+					}
+				}
 			cameraData = null;
 		}
 
@@ -423,13 +429,15 @@ namespace DecalSystem
 			DrawMeshes();
 		}
 
-		public void RepaintIfRequired()
+		public bool RepaintIfRequired()
 		{
 			if (repaintRequired)
 			{
 				Repaint();
 				repaintRequired = false;
+				return true;
 			}
+			return false;
 		}
 
 		protected virtual void OnRenderObject()

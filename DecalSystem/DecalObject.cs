@@ -346,19 +346,24 @@ namespace DecalSystem
 
 		protected virtual void OnEnable()
 		{
-			GetActiveObjects();
-			if (!activeObjects.Contains(this))
+			if (!Application.isPlaying)
+				ObjectChangeState?.Invoke(this, false);
+			else
 			{
-				activeObjects.Add(this);
-				ObjectChangeState?.Invoke(this, true);
+				GetActiveObjects();
+				if (!activeObjects.Contains(this))
+				{
+					activeObjects.Add(this);
+					ObjectChangeState?.Invoke(this, true);
+				}
 			}
 		}
 
 		protected virtual void OnDisable()
 		{
 			if(!Application.isPlaying)
-				GetActiveObjects();
-			if (activeObjects != null)
+				ObjectChangeState?.Invoke(this, false);
+			else if (activeObjects != null)
 			{
 				if(activeObjects.Remove(this))
 					ObjectChangeState?.Invoke(this, false);

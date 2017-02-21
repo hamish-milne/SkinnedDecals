@@ -63,7 +63,8 @@ namespace DecalSystem.Editor
 				}
 				else
 				{
-					DecalManager.Current.RepaintIfRequired();
+					if(DecalManager.Current.RepaintIfRequired())
+						SceneView.RepaintAll();
 					repaintOnDisable = 2;
 				}
 			};
