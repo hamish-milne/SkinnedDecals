@@ -459,5 +459,17 @@ namespace DecalSystem
 				throw new ArgumentOutOfRangeException(nameof(submesh));
 			return null;
 		}
+
+		protected override void OnEnable()
+		{
+			base.OnEnable();
+			ClearData();
+		}
+
+		protected override void OnDisable()
+		{
+			base.OnDisable();
+			ClearData();
+		}
 	}
 }

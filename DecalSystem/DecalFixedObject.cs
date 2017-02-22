@@ -34,7 +34,7 @@ namespace DecalSystem
 		[Serializable]
 		protected class FixedChannel : DecalInstance
 		{
-			[SerializeField] protected DecalFixedObject obj;
+			[SerializeField, HideInInspector] protected DecalFixedObject obj;
 			[SerializeField] protected Material material;
 			[SerializeField] protected int submesh;
 			protected MaterialPropertyBlock properties;
@@ -66,16 +66,17 @@ namespace DecalSystem
 				else
 					properties.Clear();
 				var ret = UpdateMaterial();
+				// Matrices are stored as decal->object for ease of use, but the shader needs object->decal
 				if (matrices.Count == 1)
 				{
-					properties.SetMatrix(ProjectorSingle, matrices[0]);
+					properties.SetMatrix(ProjectorSingle, matrices[0].inverse);
 				}
 				else
 				{
 					var dummyMatrix = Matrix4x4.TRS(Vector3.one*float.NegativeInfinity, Quaternion.identity, Vector3.one);
 					var shaderPropertyCount = matrices.Count > 4 ? 8 : 4;
 					properties.SetMatrixArray(ProjectorMulti,
-						matrices.Concat(Enumerable.Repeat(dummyMatrix, shaderPropertyCount-matrices.Count)).ToArray());
+						matrices.Select(m => m.inverse).Concat(Enumerable.Repeat(dummyMatrix, shaderPropertyCount-matrices.Count)).ToArray());
 					// For Unity < 5.4 (I think)
 					/*for (int i = 0; i < shaderPropertyCount; i++)
 						properties.SetMatrix(ProjectorMulti + i,
@@ -120,7 +121,7 @@ namespace DecalSystem
 		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
 		{
 			base.AddDecal(projector, decal, submesh);
-			var matrix = projector.worldToLocalMatrix * transform.localToWorldMatrix;
+			var matrix = transform.worldToLocalMatrix * projector.localToWorldMatrix;
 			var ret = instances.FirstOrDefault(obj => obj.TryAddMatrix(this, decal, submesh, matrix));
 			if (ret == null)
 			{

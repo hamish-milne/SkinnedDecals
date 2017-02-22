@@ -14,7 +14,7 @@ namespace DecalSystem
 		[Serializable]
 		protected class Instance : DecalInstance
 		{
-			[SerializeField] protected DecalScreenSpaceObject obj;
+			[SerializeField, HideInInspector] protected DecalScreenSpaceObject obj;
 			public Matrix4x4 matrix;
 
 			public override DecalObject DecalObject => obj;
@@ -42,6 +42,7 @@ namespace DecalSystem
 		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
 		{
 			base.AddDecal(projector, decal, submesh);
+			// TODO: Make relative to object
 			var ret = new Instance(this, decal, projector.localToWorldMatrix);
 			instances.Add(ret);
 			ClearData();
