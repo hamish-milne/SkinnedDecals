@@ -271,5 +271,7 @@ namespace DecalSystem
 		{
 			return null;
 		}
+
+		public abstract bool RequiresDepthTexture(Material mat);
 	}
 }

@@ -102,5 +102,10 @@ namespace DecalSystem
 				return deferredPasses;
 			return base.GetKnownPasses(renderingPath);
 		}
+
+		public override bool RequiresDepthTexture(Material mat)
+		{
+			return mat?.IsKeywordEnabled(ScreenSpace) ?? false;
+		}
 	}
 }

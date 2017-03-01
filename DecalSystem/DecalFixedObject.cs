@@ -10,6 +10,7 @@ namespace DecalSystem
 	/// Renders decals on a fixed <c>MeshRenderer</c>
 	/// </summary>
 	[RequireComponent(typeof(MeshRenderer))]
+	[RendererType(typeof(MeshRenderer))]
 	public class DecalFixedObject : DecalObjectBase
 	{
 		private static readonly string[] modes = {FixedSingle, Fixed4, Fixed8};
@@ -18,7 +19,7 @@ namespace DecalSystem
 
 		public override Renderer Renderer => MeshRenderer;
 
-		public override Bounds Bounds => MeshRenderer.bounds;
+		public override Bounds? Bounds => MeshRenderer.bounds;
 
 		private Mesh mesh;
 		private MeshRenderer meshRenderer;
@@ -105,10 +106,12 @@ namespace DecalSystem
 			{
 				return new MeshData
 				{
+					instance = this,
 					material = material,
 					materialPropertyBlock = properties,
-					submesh = submesh,
-					matrix = Matrix4x4.identity
+					mesh = obj.Mesh,
+					transform = obj.transform,
+					submesh = submesh
 				};
 			}
 
@@ -158,23 +161,19 @@ namespace DecalSystem
 				.Select(obj =>
 			{
 				obj.RefreshMatrices(false);
-				var data = obj.GetMeshData();
-				data.mesh = Mesh;
-				data.transform = MeshRenderer.transform;
-				return data;
+				return obj.GetMeshData();
 			}).ToArray();
 		}
 
-		protected override void GetDeferredData(out MeshData[] meshData, out RendererData[] rendererData)
+		// TODO: Merge these somehow?
+		protected override MeshData[] GetDeferredData()
 		{
-			rendererData = null;
-			meshData = GetMeshData();
+			return GetMeshData();
 		}
 
-		protected override void GetForwardData(out MeshData[] meshData, out RendererData[] rendererData)
+		protected override MeshData[] GetForwardData()
 		{
-			rendererData = null;
-			meshData = GetMeshData();
+			return GetMeshData();
 		}
 	}
 }

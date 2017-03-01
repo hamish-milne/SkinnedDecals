@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace DecalSystem
 {
+	[RendererType(typeof(Terrain))]
 	public class DecalScreenSpaceObject : DecalObjectBase
 	{
 		private static readonly string[] modes = {ShaderKeywords.ScreenSpace};
@@ -35,15 +36,16 @@ namespace DecalSystem
 
 		public override bool ScreenSpace => true;
 
-		public override Bounds Bounds => bounds;
+		public override Bounds? Bounds => bounds;
 
 		public override Renderer Renderer => null;
 
 		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
 		{
 			base.AddDecal(projector, decal, submesh);
-			// TODO: Make relative to object
-			var ret = new Instance(this, decal, projector.localToWorldMatrix);
+			// Multiply projector matrix by local transform; exact one used doesn't matter because we reverse this transformation
+			// when building the command buffers. This keeps the decal local to the space of the object
+			var ret = new Instance(this, decal, projector.localToWorldMatrix * transform.worldToLocalMatrix);
 			instances.Add(ret);
 			ClearData();
 			return ret;
@@ -73,8 +75,6 @@ namespace DecalSystem
 
 		public override Mesh Mesh => CubeMesh;
 
-		protected override bool RequireDepthTexture => true;
-
 		private void Cleanup()
 		{
 			instances.RemoveAll(obj => obj.DecalMaterial == null);
@@ -89,21 +89,36 @@ namespace DecalSystem
 			{
 				instance = obj,
 				material = obj.DecalMaterial.GetMaterial(ShaderKeywords.ScreenSpace),
-				matrix = obj.matrix,
+				matrix = obj.matrix * transform.localToWorldMatrix, // Reverse transformation in AddDecal
 				mesh = Mesh
 			}).ToArray();
 		}
 
-		protected override void GetDeferredData(out MeshData[] meshData, out RendererData[] rendererData)
+
+		// TODO: Merge these somehow?
+		protected override MeshData[] GetDeferredData()
 		{
-			rendererData = null;
-			meshData = GetMeshData();
+			return GetMeshData();
 		}
 
-		protected override void GetForwardData(out MeshData[] meshData, out RendererData[] rendererData)
+		protected override MeshData[] GetForwardData()
 		{
-			rendererData = null;
-			meshData = GetMeshData();
+			return GetMeshData();
+		}
+
+		private Vector3 lastPosition;
+		private Quaternion lastRotation;
+		private Vector3 lastScale;
+		public override MeshData[] GetRenderPathData(RenderingPath path)
+		{
+			if (lastPosition != transform.position || lastRotation != transform.rotation || lastScale != transform.lossyScale)
+			{
+				ClearData();
+				lastPosition = transform.position;
+				lastRotation = transform.rotation;
+				lastScale = transform.lossyScale;
+			}
+			return base.GetRenderPathData(path);
 		}
 	}
 }

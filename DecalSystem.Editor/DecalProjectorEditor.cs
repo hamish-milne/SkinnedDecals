@@ -69,5 +69,12 @@ namespace DecalSystem.Editor
 				}
 			};
 		}
+
+		[MenuItem("GameObject/Add Decal Object", false, 0)]
+		protected static void AddDecalObject()
+		{
+			foreach (var obj in Selection.gameObjects)
+				DecalObject.GetOrCreate(obj);
+		}
 	}
 }

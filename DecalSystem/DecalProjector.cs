@@ -92,7 +92,9 @@ namespace DecalSystem
 			var projectorBounds = GetBounds();
 			foreach (var obj in allObjects)
 			{
-				if (!projectorBounds.Intersects(obj.Bounds) ||
+				var bounds = obj.Bounds;
+				if (bounds == null) continue;
+				if (!projectorBounds.Intersects(bounds.Value) ||
 					FilterList(objectFilter, objectFilterMode, obj)) continue;
 				if (obj.Renderer == null)
 				{
@@ -137,7 +139,9 @@ namespace DecalSystem
 			var projectorBounds = GetBounds();
 			foreach (var obj in allObjects)
 			{
-				if (!projectorBounds.Intersects(obj.Bounds) ||
+				var bounds = obj.Bounds;
+				if (bounds == null) continue;
+				if (!projectorBounds.Intersects(bounds.Value) ||
 					FilterList(objectFilter, objectFilterMode, obj)) continue;
 				if (obj.Renderer == null)
 				{
@@ -171,6 +175,11 @@ namespace DecalSystem
 		}
 
 		protected virtual void OnDrawGizmosSelected()
+		{
+			DrawGizmo(transform);
+		}
+
+		public static void DrawGizmo(Transform transform)
 		{
 			Gizmos.matrix = transform.localToWorldMatrix;
 			Gizmos.color = Color.cyan;

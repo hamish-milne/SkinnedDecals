@@ -22,6 +22,7 @@ namespace DecalSystem
 	}
 
 	[RequireComponent(typeof(SkinnedMeshRenderer))]
+	[RendererType(typeof(SkinnedMeshRenderer))]
 	public class DecalSkinnedObject : DecalObjectBase
 	{
 		private static readonly string[] modes = { SkinnedBuffer, SkinnedUv };
@@ -138,7 +139,7 @@ namespace DecalSystem
 			return decalRenderer;
 		}
 
-		public override Bounds Bounds => SkinnedRenderer.bounds;
+		public override Bounds? Bounds => SkinnedRenderer.bounds;
 
 		public override Mesh Mesh => SkinnedRenderer.sharedMesh;
 
@@ -458,31 +459,29 @@ namespace DecalSystem
 			return newC;
 		}
 
-		protected override void GetDeferredData(out MeshData[] meshData, out RendererData[] rendererData)
+		protected override MeshData[] GetDeferredData()
 		{
 			foreach (var c in channels)
 				c.Reload(Mesh.vertexCount);
-			meshData = null;
-			rendererData = null;
-			if (UseCommandBuffer)
-				rendererData = channels
-					.Where(c => c.Enabled)
-					.SelectMany(c => Enumerable.Range(0, Mesh.subMeshCount)
-						.Where(i => (c.submeshMask & (1 << i)) != 0)
-						.Select(i => new RendererData
-							{
-								renderer = SkinnedRenderer,
-								material = c.material,
-								submesh = i
-							}
-						)).ToArray();
+			//rendererData = null;
+			if (!UseCommandBuffer) return null;
+			return channels
+				.Where(c => c.Enabled)
+				.SelectMany(c => Enumerable.Range(0, Mesh.subMeshCount)
+					.Where(i => (c.submeshMask & (1 << i)) != 0)
+					.Select(i => new MeshData
+						{
+							renderer = SkinnedRenderer,
+							material = c.material,
+							submesh = i
+						}
+					)).ToArray();
 		}
 
 
-		protected override void GetForwardData(out MeshData[] meshData, out RendererData[] rendererData)
+		protected override MeshData[] GetForwardData()
 		{
-			meshData = null;
-			rendererData = null;
+			return null;
 		}
 
 		protected virtual void OnDestroy()

@@ -29,16 +29,6 @@ namespace DecalSystem
 			/// The command buffer to bind, if any
 			/// </summary>
 			public CommandBuffer command;
-
-			/// <summary>
-			/// The list of <c>DrawMesh</c> commands
-			/// </summary>
-			public readonly List<MeshData> meshData = new List<MeshData>();
-
-			/// <summary>
-			/// The list of meshes for which <c>DrawMesh</c> cannot be used
-			/// </summary>
-			public readonly List<MeshData> meshDataForBuffer = new List<MeshData>();
 		}
 
 		/// <summary>
@@ -47,6 +37,9 @@ namespace DecalSystem
 		[SerializeField] protected bool renderSceneCamera = true;
 
 		private CameraData[] cameraData;
+
+		private readonly Dictionary<RenderingPath, List<MeshData>> renderPathData
+			= new Dictionary<RenderingPath, List<MeshData>>();
 
 		/// <summary>
 		/// The currently enabled manager instance
@@ -171,18 +164,28 @@ namespace DecalSystem
 
 		protected virtual void SetupCommandBuffer(CameraData cd, CommandBuffer cmd)
 		{
+			// BeforeReflections is after the G-buffer *and* after depth is resolved
+			// But, we need to set the render target back to the G-buffer to draw decals
+			// Just using AfterGBuffer, the depth is from the previous frame, which causes flickering
 			if (cd.cameraEvent == CameraEvent.BeforeReflections)
 			{
 				cmd.SetRenderTarget(gBuffer, depth);
 			}
 		}
 
+		private bool doClearData;
+
 		/// <summary>
 		/// Clears the cached camera data, rebuilding command lists the next frame
 		/// </summary>
 		public void ClearData()
 		{
-			if(cameraData != null)
+			doClearData = true;
+		}
+
+		public void ClearDataNow()
+		{
+			if (cameraData != null)
 				foreach (var cd in cameraData)
 				{
 					if (cd.command != null)
@@ -192,6 +195,7 @@ namespace DecalSystem
 					}
 				}
 			cameraData = null;
+			renderPathData.Clear();
 		}
 
 		// Stores the previous camera setup, to detect changes
@@ -307,9 +311,9 @@ namespace DecalSystem
 			return cd.command;
 		}
 
-		protected virtual bool CanUseDrawMesh(RenderingPath rp, MeshData md, RenderPathData rpd)
+		protected virtual bool CanUseDrawMesh(RenderingPath rp, MeshData md)
 		{
-			return !(rp == RenderingPath.DeferredShading && rpd.RequiresDepthTexture);
+			return !(rp == RenderingPath.DeferredShading && md.instance.DecalMaterial.RequiresDepthTexture(md.material));
 		}
 
 		protected void RebuildCameraDataIfNeeded()
@@ -318,10 +322,14 @@ namespace DecalSystem
 			{
 				Debug.Log("Rebuilding camera data");
 				var activeObjects = DecalObject.ActiveObjects;
-				ClearData();
+				ClearDataNow();
 				var list = new List<CameraData>();
 				foreach (var cam in cameraArray)
 				{
+					List<MeshData> dataList;
+					if (!renderPathData.TryGetValue(cam.actualRenderingPath, out dataList))
+						renderPathData.Add(cam.actualRenderingPath, dataList = new List<MeshData>());
+
 					var cd = new CameraData { camera = cam };
 					var requireDepthTexture = false;
 					// ReSharper disable once ForCanBeConvertedToForeach
@@ -330,13 +338,17 @@ namespace DecalSystem
 						var rpd = activeObjects[i].GetRenderPathData(cam.actualRenderingPath);
 						if (rpd == null)
 							continue;
-						requireDepthTexture |= rpd.RequiresDepthTexture;
-						if (rpd.MeshData != null)
-							foreach (var md in rpd.MeshData)
-								if (CanUseDrawMesh(cam.actualRenderingPath, md, rpd))
-									cd.meshData.Add(md);
-								else
-									cd.meshDataForBuffer.Add(md);
+						foreach (var md in rpd)
+						{
+							if (md.mesh == null) continue;
+							if (md.instance == null)
+							{
+								Debug.LogError($"Mesh data from {activeObjects[i]} does not set an instance");
+								continue;
+							}
+							requireDepthTexture |= md.instance.DecalMaterial?.RequiresDepthTexture(md.material) ?? false;
+							dataList.Add(md);
+						}
 					}
 					cam.depthTextureMode = requireDepthTexture ? DepthTextureMode.Depth : DepthTextureMode.None;
 					list.Add(cd);
@@ -345,10 +357,8 @@ namespace DecalSystem
 			}
 		}
 		
-		// TODO: Don't do this if no manual culling
-		protected void RebuildVisibleCommandBuffers()
+		protected void DrawDecals()
 		{
-			var activeObjects = DecalObject.ActiveObjects;
 			foreach (var cd in cameraData)
 			{
 				if (cd.command != null)
@@ -356,67 +366,60 @@ namespace DecalSystem
 					cd.command.Clear();
 					SetupCommandBuffer(cd, cd.command);
 				}
-				// Load DrawRenderer commands
-				// ReSharper disable once ForCanBeConvertedToForeach
-				for (int i = 0; i < activeObjects.Count; i++)
+
+				var rp = cd.camera.actualRenderingPath;
+				List<MeshData> dataList;
+				if (!renderPathData.TryGetValue(rp, out dataList)) continue;
+				for (var i = 0; i < dataList.Count; i++)
 				{
-					var obj = activeObjects[i];
-					var rpd = obj.GetRenderPathData(cd.camera.actualRenderingPath);
-					if ((rpd?.RendererData == null && cd.meshDataForBuffer.Count <= 0) ||
-					    (obj.UseManualCulling && !toRender.Contains(new KeyValuePair<DecalObject, Camera>(obj, cd.camera))))
-						continue;
-					var cmd = GetCommandBuffer(cd);
-					if (rpd?.RendererData != null)
-						foreach (var rd in rpd.RendererData)
-						{
-							var passes = rd.instance?.DecalMaterial?.GetKnownPasses(cd.camera.actualRenderingPath);
-							if (passes == null)
-							{
-								Debug.LogError($"Unable to determine pass order for decal in {obj}", obj);
-								obj.enabled = false;
-								break;
-							}
-							foreach(var pass in passes)
-								cmd.DrawRenderer(rd.renderer, rd.material, rd.submesh, pass);
-						}
-					
-				}
-				// Load DrawMesh commands
-				for (int i = 0; i < cd.meshDataForBuffer.Count; i++)
-				{
-					var md = cd.meshDataForBuffer[i];
-					var matrix = md.matrix;
-					if (md.transform != null)
-						matrix = matrix*md.transform.localToWorldMatrix;
-					var passes = md.instance?.DecalMaterial?.GetKnownPasses(cd.camera.actualRenderingPath);
-					if (passes == null)
+					var md = dataList[i];
+					var obj = md.instance?.DecalObject;
+					try
 					{
-						Debug.LogError($"Unable to determine pass order for decal with {md.instance?.DecalMaterial} material", this);
-						cd.meshDataForBuffer.Remove(md);
-						break;
+						if(obj == null)
+							throw new Exception($"Decal {md.instance} has no parent object");
+						var useCommandBuffer = md.renderer != null;
+						useCommandBuffer |= md.mesh != null && !CanUseDrawMesh(rp, md);
+						if (useCommandBuffer)
+						{
+							// Culling
+							if (obj.UseManualCulling && toRender.Contains(new KeyValuePair<DecalObject, Camera>(obj, cd.camera)))
+								continue;
+							var cmd = GetCommandBuffer(cd);
+							var passes = md.instance.DecalMaterial?.GetKnownPasses(cd.camera.actualRenderingPath);
+							if (passes == null)
+								throw new Exception($"Unable to determine pass order for decal with {md.instance}");
+							if (md.renderer != null)
+							{
+								foreach (var pass in passes)
+									cmd.DrawRenderer(md.renderer, md.material, md.submesh, pass);
+							}
+							else
+							{
+								var matrix = md.GetFinalMatrix();
+								if (matrix == null)
+									throw new Exception($"No matrix for decal {md.instance}");
+								foreach (var pass in passes)
+									cmd.DrawMesh(md.mesh, matrix.Value, md.material, md.submesh, pass, md.materialPropertyBlock);
+							}
+						}
+						else if (md.mesh != null)
+						{
+							var matrix = md.GetFinalMatrix();
+							if (matrix == null)
+								throw new Exception($"No matrix for decal {md.instance}");
+							Graphics.DrawMesh(md.mesh, matrix.Value, md.material, 0, //Default layer
+								cd.camera, md.submesh, md.materialPropertyBlock, false, true);
+						}
 					}
-					var cmd = GetCommandBuffer(cd);
-					foreach (var pass in passes)
-						cmd.DrawMesh(md.mesh, matrix, md.material, md.submesh, pass, md.materialPropertyBlock);
+					catch (Exception e)
+					{
+						Debug.LogException(e, obj);
+						dataList.RemoveAt(i--);
+					}
 				}
 			}
 			toRender.Clear();
-		}
-
-		protected void DrawMeshes()
-		{
-			foreach (var cd in cameraData)
-			{
-				if (cd.meshData == null) continue;
-				foreach (var md in cd.meshData)
-				{
-					var matrix = md.matrix;
-					if (md.transform != null)
-						matrix = matrix * md.transform.localToWorldMatrix;
-					Graphics.DrawMesh(md.mesh, matrix, md.material, 0,
-						cd.camera, md.submesh, md.materialPropertyBlock, false, true);
-				}
-			}
 		}
 
 		private bool repaintRequired;
@@ -424,9 +427,13 @@ namespace DecalSystem
 		public void Repaint()
 		{
 			if (!enabled) return;
+			if (doClearData)
+			{
+				ClearDataNow();
+				doClearData = false;
+			}
 			RebuildCameraDataIfNeeded();
-			RebuildVisibleCommandBuffers();
-			DrawMeshes();
+			DrawDecals();
 		}
 
 		public bool RepaintIfRequired()

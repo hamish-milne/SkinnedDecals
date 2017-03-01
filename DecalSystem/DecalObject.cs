@@ -36,6 +36,8 @@ namespace DecalSystem
 		/// </summary>
 		public Mesh mesh;
 
+		public Renderer renderer;
+
 		/// <summary>
 		/// The submesh index
 		/// </summary>
@@ -50,7 +52,7 @@ namespace DecalSystem
 		/// <summary>
 		/// An extra matrix that is applied after the transform
 		/// </summary>
-		public Matrix4x4 matrix;
+		public Matrix4x4? matrix;
 
 		/// <summary>
 		/// The material to use
@@ -61,6 +63,19 @@ namespace DecalSystem
 		/// Extra material properties
 		/// </summary>
 		public MaterialPropertyBlock materialPropertyBlock;
+
+		public Matrix4x4? GetFinalMatrix()
+		{
+			Matrix4x4 m;
+			if (transform != null && matrix != null)
+				m = matrix.Value * transform.localToWorldMatrix;
+			else if (transform != null)
+				m = transform.localToWorldMatrix;
+			else if (matrix != null)
+				m = matrix.Value;
+			else return null;
+			return m;
+		}
 	}
 
 	/// <summary>
@@ -104,17 +119,17 @@ namespace DecalSystem
 		/// <summary>
 		/// The list of <c>RendererData</c>. Can be <c>null</c>
 		/// </summary>
-		public RendererData[] RendererData { get; }
+		//public RendererData[] RendererData { get; }
 
 		/// <summary>
 		/// Whether the <c>DecalObject</c> requires the camera to render a depth texture.
 		/// </summary>
 		public bool RequiresDepthTexture { get; }
 
-		public RenderPathData(MeshData[] meshData, RendererData[] rendererData, bool requiresDepthTexture)
+		public RenderPathData(MeshData[] meshData, /*RendererData[] rendererData,*/ bool requiresDepthTexture)
 		{
 			MeshData = meshData;
-			RendererData = rendererData;
+			//RendererData = rendererData;
 			RequiresDepthTexture = requiresDepthTexture;
 		}
 	}
@@ -198,12 +213,44 @@ namespace DecalSystem
 		}
 	}
 
+	[AttributeUsage(AttributeTargets.Class)]
+	public class RendererTypeAttribute : Attribute
+	{
+		public Type Type { get; set; }
+
+		public RendererTypeAttribute(Type type)
+		{
+			Type = type;
+		}
+	}
+
 	/// <summary>
 	/// An object that can receive decals.
 	/// </summary>
 	[ExecuteInEditMode]
 	public abstract class DecalObject : MonoBehaviour
 	{
+
+		private static readonly Dictionary<Type, Type> rendererTypeMap = Util.GetAllTypes()
+			.Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(DecalObject)))
+			.ToDictionaryPermissive(
+				t => ((RendererTypeAttribute) Attribute.GetCustomAttribute(t, typeof(RendererTypeAttribute)))?.Type,
+				t => t);
+
+		public static DecalObject GetOrCreate(GameObject obj)
+		{
+			var ret = obj.GetComponent<DecalObject>();
+			if (ret != null) return ret;
+			foreach (var c in obj.GetComponents(typeof(Component)))
+			{
+				Type doType;
+				if (rendererTypeMap.TryGetValue(c.GetType(), out doType))
+					return (DecalObject) obj.AddComponent(doType);
+			}
+			return (DecalObject) obj.AddComponent(rendererTypeMap[typeof(object)]);
+		}
+
+
 		public abstract string[] RequiredModes { get; }
 
 		private static List<DecalObject> activeObjects;
@@ -239,9 +286,9 @@ namespace DecalSystem
 		}
 
 		/// <summary>
-		/// The world-space bounds of the object
+		/// The world-space bounds of the object. If this is <c>null</c>, new decals cannot be added
 		/// </summary>
-		public abstract Bounds Bounds { get; }
+		public abstract Bounds? Bounds { get; }
 
 		/// <summary>
 		/// The renderer the object is attached to. Can be <c>null</c> for screen space decals.
@@ -279,7 +326,7 @@ namespace DecalSystem
 		/// </summary>
 		/// <param name="path"></param>
 		/// <returns>The rendering data, cached at this level, or <c>null</c></returns>
-		public abstract RenderPathData GetRenderPathData(RenderingPath path);
+		public abstract MeshData[] GetRenderPathData(RenderingPath path);
 
 		/// <summary>
 		/// Adds a new decal to this instance
@@ -380,10 +427,10 @@ namespace DecalSystem
 	/// </remarks>
 	public abstract class DecalObjectBase : DecalObject
 	{
-		/// <summary>
+		/*/// <summary>
 		/// Whether the object requires a camera depth texture
 		/// </summary>
-		protected virtual bool RequireDepthTexture => false;
+		protected virtual bool RequireDepthTexture => false;*/
 
 		/// <summary>
 		/// Whether to require <c>DecalManager.RenderObject</c> to be called for this object
@@ -393,19 +440,16 @@ namespace DecalSystem
 		/// <summary>
 		/// Gets the data for the forward path
 		/// </summary>
-		/// <param name="meshData"></param>
-		/// <param name="rendererData"></param>
-		protected abstract void GetForwardData(out MeshData[] meshData, out RendererData[] rendererData);
+		protected abstract MeshData[] GetForwardData();
 
 		/// <summary>
 		/// Gets the data for the deferred path
 		/// </summary>
-		/// <param name="meshData"></param>
-		/// <param name="rendererData"></param>
-		protected abstract void GetDeferredData(out MeshData[] meshData, out RendererData[] rendererData);
+		protected abstract MeshData[] GetDeferredData();
 
-		private RenderPathData deferredData, forwardData;
+		private MeshData[] deferredData, forwardData;
 
+		// TODO: On material change as well? Need to test
 		public override void Refresh(RefreshAction action)
 		{
 			base.Refresh(action);
@@ -416,35 +460,27 @@ namespace DecalSystem
 		/// <summary>
 		/// Clears the cached data
 		/// </summary>
-		protected void ClearData()
+		protected void ClearData(bool notify = true)
 		{
-			deferredData = null;
-			forwardData = null;
-			NotifyDataChanged();
+			if (deferredData != null || forwardData != null)
+			{
+				deferredData = null;
+				forwardData = null;
+				if(notify)
+					NotifyDataChanged();
+			}
 		}
 
-		public override RenderPathData GetRenderPathData(RenderingPath path)
+		public override MeshData[] GetRenderPathData(RenderingPath path)
 		{
 			if (!enabled)
 				return null;
-			MeshData[] meshData;
-			RendererData[] rendererData;
 			switch (path)
 			{
 				case RenderingPath.DeferredShading:
-					if (deferredData == null)
-					{
-						GetDeferredData(out meshData, out rendererData);
-						deferredData = new RenderPathData(meshData, rendererData, RequireDepthTexture);
-					}
-					return deferredData;
+					return deferredData ?? (deferredData = GetDeferredData());
 				case RenderingPath.Forward:
-					if (forwardData == null)
-					{
-						GetForwardData(out meshData, out rendererData);
-						forwardData = new RenderPathData(meshData, rendererData, RequireDepthTexture);
-					}
-					return forwardData;
+					return forwardData ?? (forwardData = GetForwardData());
 			}
 			return null;
 		}
@@ -463,13 +499,13 @@ namespace DecalSystem
 		protected override void OnEnable()
 		{
 			base.OnEnable();
-			ClearData();
+			ClearData(false);
 		}
 
 		protected override void OnDisable()
 		{
 			base.OnDisable();
-			ClearData();
+			ClearData(false);
 		}
 	}
 }
