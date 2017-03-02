@@ -64,8 +64,6 @@ namespace DecalSystem
 		/// </summary>
 		public MaterialPropertyBlock materialPropertyBlock;
 
-		public Action<DecalInstance, Camera, MaterialPropertyBlock> updateMaterial;
-
 		public Matrix4x4? GetFinalMatrix()
 		{
 			Matrix4x4 m;
@@ -373,29 +371,14 @@ namespace DecalSystem
 	/// </remarks>
 	public abstract class DecalObjectBase : DecalObject
 	{
-		/*/// <summary>
-		/// Whether the object requires a camera depth texture
-		/// </summary>
-		protected virtual bool RequireDepthTexture => false;*/
-
 		/// <summary>
 		/// Whether to require <c>DecalManager.RenderObject</c> to be called for this object
 		/// </summary>
 		public override bool UseManualCulling => false;
 
-		/// <summary>
-		/// Gets the data for the forward path
-		/// </summary>
-		protected abstract MeshData[] GetForwardData();
-
-		/// <summary>
-		/// Gets the data for the deferred path
-		/// </summary>
-		protected abstract MeshData[] GetDeferredData();
-
-		private MeshData[] deferredData, forwardData;
-
-		// TODO: On material change as well? Need to test
+		private MeshData[] cachedData;
+		
+		// TODO: On material changed (not properties)
 		public override void Refresh(RefreshAction action)
 		{
 			base.Refresh(action);
@@ -408,10 +391,9 @@ namespace DecalSystem
 		/// </summary>
 		protected void ClearData(bool notify = true)
 		{
-			if (deferredData != null || forwardData != null)
+			if (cachedData != null)
 			{
-				deferredData = null;
-				forwardData = null;
+				cachedData = null;
 				if(notify)
 					NotifyDataChanged();
 			}
@@ -421,15 +403,10 @@ namespace DecalSystem
 		{
 			if (!enabled)
 				return null;
-			switch (path)
-			{
-				case RenderingPath.DeferredShading:
-					return deferredData ?? (deferredData = GetDeferredData());
-				case RenderingPath.Forward:
-					return forwardData ?? (forwardData = GetForwardData());
-			}
-			return null;
+			return cachedData ?? (cachedData = GetDataUncached());
 		}
+
+		protected abstract MeshData[] GetDataUncached();
 
 		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
 		{

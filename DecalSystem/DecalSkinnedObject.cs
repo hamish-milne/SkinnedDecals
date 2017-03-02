@@ -459,11 +459,10 @@ namespace DecalSystem
 			return newC;
 		}
 
-		protected override MeshData[] GetDeferredData()
+		protected override MeshData[] GetDataUncached()
 		{
 			foreach (var c in channels)
 				c.Reload(Mesh.vertexCount);
-			//rendererData = null;
 			if (!UseCommandBuffer) return null;
 			return channels
 				.Where(c => c.Enabled)
@@ -476,12 +475,6 @@ namespace DecalSystem
 							submesh = i
 						}
 					)).ToArray();
-		}
-
-
-		protected override MeshData[] GetForwardData()
-		{
-			return null;
 		}
 
 		protected virtual void OnDestroy()

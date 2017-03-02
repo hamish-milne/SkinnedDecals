@@ -151,7 +151,7 @@ namespace DecalSystem
 			instances.RemoveAll(obj => obj.DecalMaterial == null);
 		}
 
-		protected virtual MeshData[] GetMeshData()
+		protected override MeshData[] GetDataUncached()
 		{
 			Cleanup();
 			if (instances.Count == 0 || !enabled)
@@ -163,17 +163,6 @@ namespace DecalSystem
 				obj.RefreshMatrices(false);
 				return obj.GetMeshData();
 			}).ToArray();
-		}
-
-		// TODO: Merge these somehow?
-		protected override MeshData[] GetDeferredData()
-		{
-			return GetMeshData();
-		}
-
-		protected override MeshData[] GetForwardData()
-		{
-			return GetMeshData();
 		}
 	}
 }

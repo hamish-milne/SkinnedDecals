@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "UnityCG.cginc"
-#include "DecalLighting.cginc"
+#include "UnityPBSLighting.cginc"
 
 // Infer some defines from the shader keywords
 #ifdef _FIXED4
@@ -365,7 +365,7 @@ void SmoothnessVert(in appdata_full v, out Input o, out float4 position : POSITI
 	position = mul(UNITY_MATRIX_MVP, v.vertex);
 }
 
-void FinalGBuffer(Input IN, DecalSurfaceOutputStandard o,
+void FinalGBuffer(Input IN, SurfaceOutputStandard o,
 	inout half4 diffuse, inout half4 specSmoothness, inout half4 normal, inout half4 emission)
 {
 #ifdef _NORMALMAP
@@ -385,7 +385,7 @@ void FinalGBuffer(Input IN, DecalSurfaceOutputStandard o,
 	emission.a = o.Alpha;
 }
 
-void FinalColor(Input IN, DecalSurfaceOutputStandard o, inout half4 color)
+void FinalColor(Input IN, SurfaceOutputStandard o, inout half4 color)
 {
 	color.rgb *= o.Alpha;
 }

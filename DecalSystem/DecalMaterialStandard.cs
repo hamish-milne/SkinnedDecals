@@ -92,12 +92,30 @@ namespace DecalSystem
 			return supportedKeywords.Contains(mode) ? ShaderInstance : null;
 		}
 
-		public override Material CreateMaterial(string modeString)
+		private Material screenSpaceDeferred;
+
+		public override void Refresh()
 		{
-			var ret = base.CreateMaterial(modeString);
-			//if(ret?.IsKeywordEnabled(ScreenSpace) ?? false)
-			//	ret.SetFloat("_Cull", (int)UnityEngine.Rendering.CullMode.Front);
-			return ret;
+			base.Refresh();
+			if (screenSpaceDeferred != null)
+			{
+				SetKeywords(screenSpaceDeferred);
+				CopyTo(screenSpaceDeferred);
+			}
+		}
+
+		// The screen-space deferred material needs to use front-face culling so it doesn't
+		// vanish when the camera moves within the bounding box
+		public override Material ModifyMaterial(Material m, RenderingPath rp)
+		{
+			if (m.IsKeywordEnabled(ScreenSpace) && rp == RenderingPath.DeferredShading)
+			{
+				if(screenSpaceDeferred != null) return screenSpaceDeferred;
+				screenSpaceDeferred = Instantiate(m);
+				screenSpaceDeferred.SetFloat("_Cull", (int)UnityEngine.Rendering.CullMode.Front);
+				return screenSpaceDeferred;
+			}
+			return m;
 		}
 
 		// Both passes are named 'DEFERRED', so we have to enumerate them

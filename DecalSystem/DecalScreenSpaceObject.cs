@@ -21,20 +21,6 @@ namespace DecalSystem
 
 			public override DecalObject DecalObject => obj;
 
-			public static readonly Action<DecalInstance, Camera, MaterialPropertyBlock> UpdateMaterial =
-				(inst, cam, block) =>
-				{
-					// decal->world
-					var mat = inst.DecalObject.transform.localToWorldMatrix*((Instance) inst).matrix;
-					// world->decal
-					mat = mat.inverse;
-					// decal camera position
-					var cpos = cam.transform.position;
-					var pos = mat*new Vector4(cpos.x, cpos.y, cpos.z, 1);
-					var cameraWithinBounds = Math.Abs(pos.x) < 0.5 && Math.Abs(pos.y) < 0.5 && Math.Abs(pos.z) < 0.5;
-					block.SetFloat("_Cull", (int) (cameraWithinBounds ? Front : Back));
-				};
-
 			public Instance(DecalScreenSpaceObject obj, DecalMaterial decal, Matrix4x4 matrix)
 			{
 				this.obj = obj;
@@ -94,7 +80,7 @@ namespace DecalSystem
 			instances.RemoveAll(obj => obj.DecalMaterial == null);
 		}
 
-		protected virtual MeshData[] GetMeshData()
+		protected override MeshData[] GetDataUncached()
 		{
 			Cleanup();
 			return instances
@@ -105,21 +91,8 @@ namespace DecalSystem
 				material = obj.DecalMaterial.GetMaterial(ShaderKeywords.ScreenSpace),
 				matrix = obj.matrix,
 				transform = transform,
-				mesh = Mesh,
-				updateMaterial = Instance.UpdateMaterial
+				mesh = Mesh
 			}).ToArray();
-		}
-
-
-		// TODO: Merge these somehow?
-		protected override MeshData[] GetDeferredData()
-		{
-			return GetMeshData();
-		}
-
-		protected override MeshData[] GetForwardData()
-		{
-			return GetMeshData();
 		}
 
 		private Vector3 lastPosition;

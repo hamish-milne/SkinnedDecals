@@ -19,6 +19,8 @@ namespace DecalSystem.Editor
 			if (GUILayout.Button("Project", GUILayout.Width(120f), GUILayout.Height(30f)))
 			{
 				projector.Project();
+				DecalManager.Current?.Repaint();
+				Resources.FindObjectsOfTypeAll<SceneView>().FirstOrDefault()?.Repaint();
 			}
 			GUILayout.FlexibleSpace();
 			if (GUILayout.Button("Bake", GUILayout.Width(120f), GUILayout.Height(30f)))
@@ -47,12 +49,14 @@ namespace DecalSystem.Editor
 			GUILayout.EndHorizontal();
 		}
 
-		[InitializeOnLoadMethod]
+		/*[InitializeOnLoadMethod]
 		protected static void AddEditorUpdate()
 		{
 			int repaintOnDisable = 0;
+			EditorWindow lastRepainted = null;
 			EditorApplication.update += () =>
 			{
+				if (EditorApplication.isPlayingOrWillChangePlaymode) return;
 				try
 				{
 					if (DecalManager.Current == null)
@@ -78,8 +82,19 @@ namespace DecalSystem.Editor
 					if (DecalManager.Current != null)
 						DecalManager.Current.enabled = false;
 				}
+				foreach (var w in Resources.FindObjectsOfTypeAll<EditorWindow>())
+				{
+					if (w == lastRepainted) continue;
+					if (w.GetType() == typeof(SceneView) || w.GetType().Name == "GameView")
+					{
+						// Only repaint one at a time
+						w.Repaint();
+						lastRepainted = w;
+						break;
+					}
+				}
 			};
-		}
+		}*/
 
 		[MenuItem("GameObject/Add Decal Object", false, 0)]
 		protected static void AddDecalObject()

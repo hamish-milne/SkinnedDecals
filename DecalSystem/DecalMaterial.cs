@@ -258,6 +258,18 @@ namespace DecalSystem
 			return GetShaderForMode(mode)?.isSupported ?? false;
 		}
 
+		/// <summary>
+		/// This allows the decal to provide a modified material for specific render paths.
+		/// The modified instance should be cached and updated by the derived class.
+		/// </summary>
+		/// <param name="m"></param>
+		/// <param name="rp"></param>
+		/// <returns></returns>
+		public virtual Material ModifyMaterial(Material m, RenderingPath rp)
+		{
+			return m;
+		}
+
 		public abstract Shader GetShaderForMode(string mode);
 
 		/// <summary>
