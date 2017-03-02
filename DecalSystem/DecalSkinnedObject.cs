@@ -227,6 +227,25 @@ namespace DecalSystem
 				mesh.UploadMeshData(false);
 			}
 
+			private struct UvIndex
+			{
+				public int channel, id;
+				public bool useZw;
+			}
+
+			private static readonly Dictionary<UvChannel, UvIndex> uvIndexMap =
+				new Dictionary<UvChannel, UvIndex>
+				{
+					{UvChannel.Uv1A, new UvIndex {channel = 0, id = 0, useZw = false}},
+					{UvChannel.Uv1B, new UvIndex {channel = 0, id = 1, useZw = true }},
+					{UvChannel.Uv2A, new UvIndex {channel = 1, id = 2, useZw = false}},
+					{UvChannel.Uv2B, new UvIndex {channel = 1, id = 3, useZw = true }},
+					{UvChannel.Uv3A, new UvIndex {channel = 2, id = 4, useZw = false}},
+					{UvChannel.Uv3B, new UvIndex {channel = 2, id = 5, useZw = true }},
+					{UvChannel.Uv4A, new UvIndex {channel = 3, id = 6, useZw = false}},
+					{UvChannel.Uv4B, new UvIndex {channel = 3, id = 7, useZw = true }},
+				};
+
 			public void Apply(int submesh)
 			{
 				if (obj.useBuffer)
@@ -235,55 +254,11 @@ namespace DecalSystem
 				}
 				else
 				{
-					int uvChannel, channelId;
-					bool useZw;
-					switch (channel)
-					{
-						case UvChannel.Uv1A:
-							uvChannel = 0;
-							channelId = 0;
-							useZw = false;
-							break;
-						case UvChannel.Uv1B:
-							uvChannel = 0;
-							channelId = 1;
-							useZw = true;
-							break;
-						case UvChannel.Uv2A:
-							uvChannel = 1;
-							channelId = 2;
-							useZw = false;
-							break;
-						case UvChannel.Uv2B:
-							uvChannel = 1;
-							channelId = 3;
-							useZw = true;
-							break;
-						case UvChannel.Uv3A:
-							uvChannel = 2;
-							channelId = 4;
-							useZw = false;
-							break;
-						case UvChannel.Uv3B:
-							uvChannel = 2;
-							channelId = 5;
-							useZw = true;
-							break;
-						case UvChannel.Uv4A:
-							uvChannel = 3;
-							channelId = 6;
-							useZw = false;
-							break;
-						case UvChannel.Uv4B:
-							uvChannel = 3;
-							channelId = 7;
-							useZw = true;
-							break;
-						default:
-							throw new Exception("Invalid UV channel");
-					}
-					ApplyToMesh(obj.Mesh, uvChannel, useZw);
-					material.SetInt(ShaderKeywords.UvChannel, channelId);
+					UvIndex idx;
+					if(!uvIndexMap.TryGetValue(channel, out idx))
+						throw new Exception("Invalid UV channel");
+					ApplyToMesh(obj.Mesh, idx.channel, idx.useZw);
+					material.SetInt(ShaderKeywords.UvChannel, idx.id);
 				}
 				submeshMask |= (1 << submesh);
 			}
