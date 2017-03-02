@@ -17,6 +17,8 @@
 
 		[HDR] _EmissionColor("Emission color", Color) = (0,0,0)
 		_EmissionMap("Emission map", 2D) = "white" {}
+
+		_Cull ("Cull", Float) = 2
 	}
 
 	Category
@@ -36,6 +38,7 @@
 		ZWrite Off
 		Offset -1,-1
 		Blend One OneMinusSrcAlpha, Zero OneMinusSrcAlpha
+		Cull [_Cull]
 
 		SubShader
 		{
@@ -54,7 +57,7 @@
 			#pragma shader_feature _ _METALLICGLOSSMAP
 			#pragma shader_feature _ _EMISSION
 			#pragma shader_feature _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV _FIXED8 _SKINNEDBUFFER
-			#pragma surface surf DecalStandard nometa vertex:vert finalgbuffer:FinalGBuffer finalcolor:FinalColor keepalpha nolightmap
+			#pragma surface surf Standard nometa vertex:vert finalgbuffer:FinalGBuffer finalcolor:FinalColor keepalpha nolightmap
 
 			#include "DecalSystem.cginc"
 			ENDCG
@@ -92,7 +95,7 @@
 			#pragma shader_feature _ _METALLICGLOSSMAP
 			#pragma shader_feature _ _EMISSION
 			#pragma shader_feature _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV
-			#pragma surface surf DecalStandard nometa vertex:vert finalgbuffer:FinalGBuffer finalcolor:FinalColor keepalpha nolightmap
+			#pragma surface surf Standard nometa vertex:vert finalgbuffer:FinalGBuffer finalcolor:FinalColor keepalpha nolightmap
 
 			#include "DecalSystem.cginc"
 			ENDCG

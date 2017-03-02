@@ -71,6 +71,8 @@ namespace DecalSystem
 
 		public override Shader GetShaderForMode(string mode)
 		{
+			if(ShaderInstance == null)
+				Debug.LogError("Decal shader not found, or has errors!");
 			if (supportedKeywords == null)
 			{
 				var mat = new Material(ShaderInstance);
@@ -87,7 +89,15 @@ namespace DecalSystem
 			}
 			if (string.IsNullOrEmpty(mode))
 				mode = "_";
-			return supportedKeywords.Contains(mode) ? shaderInstance : null;
+			return supportedKeywords.Contains(mode) ? ShaderInstance : null;
+		}
+
+		public override Material CreateMaterial(string modeString)
+		{
+			var ret = base.CreateMaterial(modeString);
+			//if(ret?.IsKeywordEnabled(ScreenSpace) ?? false)
+			//	ret.SetFloat("_Cull", (int)UnityEngine.Rendering.CullMode.Front);
+			return ret;
 		}
 
 		// Both passes are named 'DEFERRED', so we have to enumerate them

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using static UnityEngine.Rendering.CullMode;
 
 namespace DecalSystem
 {
@@ -19,6 +20,20 @@ namespace DecalSystem
 			public Matrix4x4 matrix;
 
 			public override DecalObject DecalObject => obj;
+
+			public static readonly Action<DecalInstance, Camera, MaterialPropertyBlock> UpdateMaterial =
+				(inst, cam, block) =>
+				{
+					// decal->world
+					var mat = inst.DecalObject.transform.localToWorldMatrix*((Instance) inst).matrix;
+					// world->decal
+					mat = mat.inverse;
+					// decal camera position
+					var cpos = cam.transform.position;
+					var pos = mat*new Vector4(cpos.x, cpos.y, cpos.z, 1);
+					var cameraWithinBounds = Math.Abs(pos.x) < 0.5 && Math.Abs(pos.y) < 0.5 && Math.Abs(pos.z) < 0.5;
+					block.SetFloat("_Cull", (int) (cameraWithinBounds ? Front : Back));
+				};
 
 			public Instance(DecalScreenSpaceObject obj, DecalMaterial decal, Matrix4x4 matrix)
 			{
@@ -43,9 +58,8 @@ namespace DecalSystem
 		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
 		{
 			base.AddDecal(projector, decal, submesh);
-			// Multiply projector matrix by local transform; exact one used doesn't matter because we reverse this transformation
-			// when building the command buffers. This keeps the decal local to the space of the object
-			var ret = new Instance(this, decal, projector.localToWorldMatrix * transform.worldToLocalMatrix);
+			// Multiply projector matrix by local transform; This keeps the decal local to the space of the object
+			var ret = new Instance(this, decal, transform.worldToLocalMatrix * projector.localToWorldMatrix);
 			instances.Add(ret);
 			ClearData();
 			return ret;
@@ -89,8 +103,10 @@ namespace DecalSystem
 			{
 				instance = obj,
 				material = obj.DecalMaterial.GetMaterial(ShaderKeywords.ScreenSpace),
-				matrix = obj.matrix * transform.localToWorldMatrix, // Reverse transformation in AddDecal
-				mesh = Mesh
+				matrix = obj.matrix,
+				transform = transform,
+				mesh = Mesh,
+				updateMaterial = Instance.UpdateMaterial
 			}).ToArray();
 		}
 

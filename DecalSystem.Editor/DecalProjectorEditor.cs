@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -52,20 +53,30 @@ namespace DecalSystem.Editor
 			int repaintOnDisable = 0;
 			EditorApplication.update += () =>
 			{
-				if (DecalManager.Current == null)
+				try
 				{
-					// Repaint 2 frames after decals are disabled
-					if (repaintOnDisable > 0)
+					if (DecalManager.Current == null)
 					{
-						SceneView.RepaintAll();
-						repaintOnDisable--;
+						// Repaint 2 frames after decals are disabled
+						if (repaintOnDisable > 0)
+						{
+							SceneView.RepaintAll();
+							repaintOnDisable--;
+						}
+					}
+					else
+					{
+						if (DecalManager.Current.RepaintIfRequired())
+							SceneView.RepaintAll();
+						repaintOnDisable = 2;
 					}
 				}
-				else
+				catch (Exception e)
 				{
-					if(DecalManager.Current.RepaintIfRequired())
-						SceneView.RepaintAll();
-					repaintOnDisable = 2;
+					Debug.LogException(e);
+					repaintOnDisable = 0;
+					if (DecalManager.Current != null)
+						DecalManager.Current.enabled = false;
 				}
 			};
 		}

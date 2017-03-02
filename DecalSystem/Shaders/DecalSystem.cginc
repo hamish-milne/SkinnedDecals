@@ -178,6 +178,10 @@ void vert(inout appdata_full v, out Input o)
 	o.screen = ComputeScreenPos(mul(UNITY_MATRIX_MVP, v.vertex));
 	o.localCameraPos = mul(_World2Object, float4(_WorldSpaceCameraPos, 1));
 	o.ray = v.vertex - o.localCameraPos;
+
+	// Fix the vertex normal and tangent to always be top-facing
+	v.normal = fixed3(0, 0, -1);
+	v.tangent = fixed4(-1, 0, 0, -1);
 #else
 	o.decalPos = v.texcoord.xyz;
 #endif
@@ -230,7 +234,7 @@ void CalculateUv(Input IN, inout float2 uv)
 #endif
 }
 
-void surf(Input IN, inout DecalSurfaceOutputStandard o)
+void surf(Input IN, inout SurfaceOutputStandard o)
 {
 
 #ifdef _FIXEDMULTI
@@ -272,6 +276,15 @@ void surf(Input IN, inout DecalSurfaceOutputStandard o)
 		o.Emission = (emission1 * alpha1) + (o.Emission * dstAlpha);
 	#endif
 	}
+
+	// For Forward, approximate blending of smoothness and metallic
+	// by tending toward 0.5
+	#if defined(UNITY_PASS_FORWARDBASE) || defined(UNITY_PASS_FORWARDADD)
+	o.Alpha = 1;
+	o.Smoothness = lerp(0.5, o.Smoothness, o.Alpha);
+	o.Metallic = lerp(0.5, o.Metallic, o.Alpha);
+	#endif
+
 	o.Albedo /= o.Alpha;
 	#ifdef _NORMALMAP
 	o.Normal /= o.Alpha;
@@ -287,13 +300,7 @@ void surf(Input IN, inout DecalSurfaceOutputStandard o)
 
 	OUTPUT_PARALLAX(uv);
 	OUTPUT_ALBEDO(uv, o.Albedo, o.Alpha);
-	#ifdef _SCREENSPACE
-		float3 nor = float3(0,0,1);
-		OUTPUT_NORMAL(uv, nor);
-		o.OutputNormal = normalize(mul(-nor, transpose((half3x3)_Object2World)));
-	#else
-		OUTPUT_NORMAL(uv, o.Normal);
-	#endif
+	OUTPUT_NORMAL(uv, o.Normal);
 	OUTPUT_METALLIC(uv, o.Smoothness, o.Metallic);
 	OUTPUT_EMISSION(uv, o.Emission);
 #endif
@@ -310,7 +317,7 @@ void SmoothnessFrag(Input IN, out half4 diffuse : SV_Target0, out half4 specSmoo
 
 #ifdef _FIXEDMULTI
 	float3 decalPos[FIXED_COUNT] = { 
-#define DECAL_ARRAY_ITEM(N, C) float3(N##X.##C, N##Y.##C, N##Z.##C)
+	#define DECAL_ARRAY_ITEM(N, C) float3(N##X.##C, N##Y.##C, N##Z.##C)
 		DECAL_ARRAY_ITEM(IN.decal1, x),
 		DECAL_ARRAY_ITEM(IN.decal1, y),
 		DECAL_ARRAY_ITEM(IN.decal1, z),
@@ -322,7 +329,7 @@ void SmoothnessFrag(Input IN, out half4 diffuse : SV_Target0, out half4 specSmoo
 		DECAL_ARRAY_ITEM(IN.decal2, z),
 		DECAL_ARRAY_ITEM(IN.decal2, w)
 	#endif
-#undef DECAL_ARRAY_ITEM
+	#undef DECAL_ARRAY_ITEM
 	};
 
 	UNROLL for (uint i = 0; i < FIXED_COUNT; i++)

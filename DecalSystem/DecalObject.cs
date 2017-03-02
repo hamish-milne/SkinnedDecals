@@ -64,73 +64,19 @@ namespace DecalSystem
 		/// </summary>
 		public MaterialPropertyBlock materialPropertyBlock;
 
+		public Action<DecalInstance, Camera, MaterialPropertyBlock> updateMaterial;
+
 		public Matrix4x4? GetFinalMatrix()
 		{
 			Matrix4x4 m;
 			if (transform != null && matrix != null)
-				m = matrix.Value * transform.localToWorldMatrix;
+				m = transform.localToWorldMatrix * matrix.Value;
 			else if (transform != null)
 				m = transform.localToWorldMatrix;
 			else if (matrix != null)
 				m = matrix.Value;
 			else return null;
 			return m;
-		}
-	}
-
-	/// <summary>
-	/// Represents a renderer that is typically drawn with a <c>CommandBuffer</c>
-	/// </summary>
-	/// <remarks>
-	/// Drawing renderers in a <c>CommandBuffer</c> is much more limited than <c>DrawMesh</c>,
-	/// but is significantly more efficient for <c>SkinnedMeshRenderers</c>, as it avoids the need
-	/// to manually skin the mesh.
-	/// </remarks>
-	public struct RendererData
-	{
-		public DecalInstance instance;
-
-		/// <summary>
-		/// The renderer to draw
-		/// </summary>
-		public Renderer renderer;
-
-		/// <summary>
-		/// The submesh index
-		/// </summary>
-		public int submesh;
-
-		/// <summary>
-		/// The material to use
-		/// </summary>
-		public Material material;
-	}
-
-	/// <summary>
-	/// Defines all the draw commands that a <c>DecalObject</c> requires
-	/// </summary>
-	public class RenderPathData
-	{
-		/// <summary>
-		/// The list of <c>MeshData</c>. Can be <c>null</c>
-		/// </summary>
-		public MeshData[] MeshData { get; }
-
-		/// <summary>
-		/// The list of <c>RendererData</c>. Can be <c>null</c>
-		/// </summary>
-		//public RendererData[] RendererData { get; }
-
-		/// <summary>
-		/// Whether the <c>DecalObject</c> requires the camera to render a depth texture.
-		/// </summary>
-		public bool RequiresDepthTexture { get; }
-
-		public RenderPathData(MeshData[] meshData, /*RendererData[] rendererData,*/ bool requiresDepthTexture)
-		{
-			MeshData = meshData;
-			//RendererData = rendererData;
-			RequiresDepthTexture = requiresDepthTexture;
 		}
 	}
 

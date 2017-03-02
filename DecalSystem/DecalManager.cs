@@ -38,8 +38,15 @@ namespace DecalSystem
 
 		private CameraData[] cameraData;
 
-		private readonly Dictionary<RenderingPath, List<MeshData>> renderPathData
-			= new Dictionary<RenderingPath, List<MeshData>>();
+		protected class RenderPathData
+		{
+			public readonly List<MeshData> meshList = new List<MeshData>();
+
+			public bool requireDepthTexture;
+		}
+
+		private readonly Dictionary<RenderingPath, RenderPathData> renderPathData
+			= new Dictionary<RenderingPath, RenderPathData>();
 
 		/// <summary>
 		/// The currently enabled manager instance
@@ -326,31 +333,37 @@ namespace DecalSystem
 				var list = new List<CameraData>();
 				foreach (var cam in cameraArray)
 				{
-					List<MeshData> dataList;
-					if (!renderPathData.TryGetValue(cam.actualRenderingPath, out dataList))
-						renderPathData.Add(cam.actualRenderingPath, dataList = new List<MeshData>());
-
 					var cd = new CameraData { camera = cam };
-					var requireDepthTexture = false;
-					// ReSharper disable once ForCanBeConvertedToForeach
-					for (int i = 0; i < activeObjects.Count; i++)
+					RenderPathData data;
+					if (!renderPathData.TryGetValue(cam.actualRenderingPath, out data))
 					{
-						var rpd = activeObjects[i].GetRenderPathData(cam.actualRenderingPath);
-						if (rpd == null)
-							continue;
-						foreach (var md in rpd)
+						Debug.Log("Adding to " + cam.actualRenderingPath);
+						renderPathData.Add(cam.actualRenderingPath, data = new RenderPathData());
+						// ReSharper disable once ForCanBeConvertedToForeach
+						for (int i = 0; i < activeObjects.Count; i++)
 						{
-							if (md.mesh == null) continue;
-							if (md.instance == null)
-							{
-								Debug.LogError($"Mesh data from {activeObjects[i]} does not set an instance");
+							var rpd = activeObjects[i].GetRenderPathData(cam.actualRenderingPath);
+							if (rpd == null)
 								continue;
+							foreach (var md in rpd)
+							{
+								if (md.mesh == null) continue;
+								if (md.instance == null)
+								{
+									Debug.LogError($"Mesh data from {activeObjects[i]} does not set an instance");
+									continue;
+								}
+								var md2 = md; // Can't modify foreach variable
+											  // If an update method is given, assume we need a property block
+								if (md2.updateMaterial != null && md2.materialPropertyBlock == null)
+									md2.materialPropertyBlock = new MaterialPropertyBlock();
+								data.requireDepthTexture |= md2.instance.DecalMaterial?.RequiresDepthTexture(md2.material) ?? false;
+								data.meshList.Add(md2);
 							}
-							requireDepthTexture |= md.instance.DecalMaterial?.RequiresDepthTexture(md.material) ?? false;
-							dataList.Add(md);
 						}
 					}
-					cam.depthTextureMode = requireDepthTexture ? DepthTextureMode.Depth : DepthTextureMode.None;
+						
+					cam.depthTextureMode = data.requireDepthTexture ? DepthTextureMode.Depth : DepthTextureMode.None;
 					list.Add(cd);
 				}
 				cameraData = list.ToArray();
@@ -368,11 +381,11 @@ namespace DecalSystem
 				}
 
 				var rp = cd.camera.actualRenderingPath;
-				List<MeshData> dataList;
-				if (!renderPathData.TryGetValue(rp, out dataList)) continue;
-				for (var i = 0; i < dataList.Count; i++)
+				RenderPathData data;
+				if (!renderPathData.TryGetValue(rp, out data)) continue;
+				for (var i = 0; i < data.meshList.Count; i++)
 				{
-					var md = dataList[i];
+					var md = data.meshList[i];
 					var obj = md.instance?.DecalObject;
 					try
 					{
@@ -380,6 +393,9 @@ namespace DecalSystem
 							throw new Exception($"Decal {md.instance} has no parent object");
 						var useCommandBuffer = md.renderer != null;
 						useCommandBuffer |= md.mesh != null && !CanUseDrawMesh(rp, md);
+						//md.updateMaterial?.Invoke(md.instance, cd.camera, md.materialPropertyBlock);
+						//md.materialPropertyBlock?.SetFloat("_Cull", 1f);
+						//md.materialPropertyBlock?.SetFloat("_Metallic", 0f);
 						if (useCommandBuffer)
 						{
 							// Culling
@@ -415,9 +431,10 @@ namespace DecalSystem
 					catch (Exception e)
 					{
 						Debug.LogException(e, obj);
-						dataList.RemoveAt(i--);
+						data.meshList.RemoveAt(i--);
 					}
 				}
+				//Debug.Log(data.meshList.Count);
 			}
 			toRender.Clear();
 		}
