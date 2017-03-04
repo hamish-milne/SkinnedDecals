@@ -18,22 +18,50 @@ namespace DecalSystem
 		public virtual DecalMaterial DecalMaterial
 		{
 			get { return decalMaterial; }
-			set { decalMaterial = value; } // TODO: Notify data changed?
+			set { decalMaterial = value; NotifyDataChanged(); }
 		}
 
-		private readonly MeshData[] meshData = new MeshData[1];
-		private readonly DecalInstanceSingle instance;
+		private readonly IDecalDraw[] drawArray = new IDecalDraw[1];
+		private readonly DecalInstanceSingle single;
 
 		public DecalSingle()
 		{
-			instance = new DecalInstanceSingle(this);
+			single = new DecalInstanceSingle(this);
+			drawArray[0] = single;
 		}
 
-		protected class DecalInstanceSingle : DecalInstance
+		public override int Count => 1;
+		public override DecalInstance GetDecal(int index)
+		{
+			if(index < 0 || index >= 1)
+				throw new ArgumentNullException(nameof(index));
+			return single;
+		}
+
+		public override bool RemoveDecal(DecalInstance instance)
+		{
+			throw new NotSupportedException();
+		}
+
+		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
+		{
+			throw new NotSupportedException();
+		}
+
+		protected virtual void OnDrawGizmosSelected()
+		{
+			DecalProjector.DrawGizmo(transform);
+		}
+
+		protected class DecalInstanceSingle : DecalInstanceBase
 		{
 			private readonly DecalSingle obj;
 
 			public override DecalObject DecalObject => obj;
+
+			public override Matrix4x4? LocalMatrix => null;
+
+			public override string ModeString => ShaderKeywords.ScreenSpace;
 
 			public override DecalMaterial DecalMaterial
 			{
@@ -53,28 +81,16 @@ namespace DecalSystem
 			}
 		}
 
-		public override MeshData[] GetRenderPathData(RenderingPath path)
+		public override void Refresh(RefreshAction action)
 		{
-			if (DecalMaterial == null) return null;
-			if(Application.isEditor)
-			meshData[0] = new MeshData
-			{
-				instance = instance,
-				material = DecalMaterial.GetMaterial(ShaderKeywords.ScreenSpace),
-				transform = transform,
-				mesh = Mesh
-			};
-			return meshData;
+			base.Refresh(action);
+			if ((action & RefreshAction.EnableDisable) != 0)
+				NotifyDataChanged();
 		}
 
-		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
+		public override IDecalDraw[] GetRenderPathData()
 		{
-			throw new NotSupportedException();
-		}
-
-		protected virtual void OnDrawGizmosSelected()
-		{
-			DecalProjector.DrawGizmo(transform);
+			return enabled ? drawArray : null;
 		}
 	}
 }

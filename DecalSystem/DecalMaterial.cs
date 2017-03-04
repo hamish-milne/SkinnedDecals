@@ -186,8 +186,15 @@ namespace DecalSystem
 				prop.materialAction(this, material);
 		}
 
-		private readonly Dictionary<string, Material> materialCache
-			= new Dictionary<string, Material>();
+		struct MaterialCacheKey
+		{
+			public string modeKeyword;
+			public string propertyName;
+			public int value;
+		}
+
+		private readonly Dictionary<MaterialCacheKey, Material> materialCache
+			= new Dictionary<MaterialCacheKey, Material>();
 
 		/// <summary>
 		/// Stores the default (no mode keyword) material here, so the reference can be preserved.
@@ -224,21 +231,36 @@ namespace DecalSystem
 		/// is read. This needs to be agreed between the decal renderer and shader code.</param>
 		/// <returns>A cached material with the correct shader and keywords set, or <c>null</c>
 		/// if the given mode is not supported.</returns>
-		public Material GetMaterial(string modeString)
+		public virtual Material GetMaterial(string modeString, string propertyName, int value)
 		{
 			if (modeString == "")
 				return defaultMaterial != null ? defaultMaterial : (defaultMaterial
 					= CreateMaterial(""));
 			Material mat;
-			materialCache.TryGetValue(modeString, out mat);
+			if (string.IsNullOrEmpty(propertyName))
+			{
+				propertyName = null;
+				value = 0;
+			}
+			var key = new MaterialCacheKey {modeKeyword = modeString, propertyName = propertyName, value = value};
+			materialCache.TryGetValue(key, out mat);
 			if (mat != null && !mat.IsKeywordEnabled(modeString))
 			{
 				Debug.LogError($"Decal material keyword was modified! Expected {modeString}", mat);
 				mat = null;
 			}
 			if (mat == null)
-				materialCache[modeString] = mat = CreateMaterial(modeString);
+			{
+				materialCache[key] = mat = CreateMaterial(modeString);
+				if(propertyName != null)
+					mat.SetInt(propertyName, value);
+			}
 			return mat;
+		}
+
+		public Material GetMaterial(string modeString)
+		{
+			return GetMaterial(modeString, null, default(int));
 		}
 
 		/// <summary>

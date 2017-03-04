@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
-using static UnityEngine.Rendering.CullMode;
 
 namespace DecalSystem
 {
@@ -14,23 +12,37 @@ namespace DecalSystem
 		public override string[] RequiredModes => modes;
 
 		[Serializable]
-		protected class Instance : DecalInstance
+		protected class ScreenSpaceInstance : DecalInstanceBase
 		{
-			[SerializeField, HideInInspector] protected DecalScreenSpaceObject obj;
+			[NonSerialized]
+			public DecalScreenSpaceObject obj;
 			public Matrix4x4 matrix;
 
 			public override DecalObject DecalObject => obj;
 
-			public Instance(DecalScreenSpaceObject obj, DecalMaterial decal, Matrix4x4 matrix)
+			public override Matrix4x4? LocalMatrix => matrix;
+
+			public override string ModeString => ShaderKeywords.ScreenSpace;
+
+			public override void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh,
+				ref Renderer renderer, ref int submesh, ref Material material,
+				ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix)
+			{
+				base.GetDrawCommand(renderPath, ref mesh, ref renderer, ref submesh,
+					ref material, ref propertyBlock, ref matrix);
+				mesh = CubeMesh;
+			}
+
+			public ScreenSpaceInstance(DecalScreenSpaceObject obj, DecalMaterial decalMaterial, Matrix4x4 matrix)
 			{
 				this.obj = obj;
-				this.decalMaterial = decal;
+				this.decalMaterial = decalMaterial;
 				this.matrix = matrix;
 			}
 		}
 
 		[SerializeField]
-		protected List<Instance> instances = new List<Instance>();
+		protected List<ScreenSpaceInstance> instances = new List<ScreenSpaceInstance>();
 
 		[SerializeField]
 		protected Bounds bounds = new Bounds(Vector3.zero, Vector3.one);
@@ -45,18 +57,24 @@ namespace DecalSystem
 		{
 			base.AddDecal(projector, decal, submesh);
 			// Multiply projector matrix by local transform; This keeps the decal local to the space of the object
-			var ret = new Instance(this, decal, transform.worldToLocalMatrix * projector.localToWorldMatrix);
+			var ret = new ScreenSpaceInstance(this, decal,
+				transform.worldToLocalMatrix * projector.localToWorldMatrix);
 			instances.Add(ret);
-			ClearData();
 			return ret;
 		}
 
-		public override void Refresh(RefreshAction action)
+		public override int Count => instances.Count;
+
+		public override DecalInstance GetDecal(int index)
 		{
-			base.Refresh(action);
-			if ((action & (RefreshAction.ChangeInstanceMaterial
-				| RefreshAction.MaterialPropertiesChanged)) != 0)
-				ClearData();
+			var ret = instances[index];
+			ret.obj = this;
+			return ret;
+		}
+
+		public override bool RemoveDecal(DecalInstance instance)
+		{
+			return instances.Remove((ScreenSpaceInstance) instance);
 		}
 
 		private static Mesh cubeMesh;
@@ -75,39 +93,11 @@ namespace DecalSystem
 
 		public override Mesh Mesh => CubeMesh;
 
-		private void Cleanup()
+		public override IEnumerable<IDecalDraw> GetDrawsUncached()
 		{
-			instances.RemoveAll(obj => obj.DecalMaterial == null);
-		}
-
-		protected override MeshData[] GetDataUncached()
-		{
-			Cleanup();
-			return instances
-				.Where(obj => obj.Enabled)
-				.Select(obj => new MeshData
-			{
-				instance = obj,
-				material = obj.DecalMaterial.GetMaterial(ShaderKeywords.ScreenSpace),
-				matrix = obj.matrix,
-				transform = transform,
-				mesh = Mesh
-			}).ToArray();
-		}
-
-		private Vector3 lastPosition;
-		private Quaternion lastRotation;
-		private Vector3 lastScale;
-		public override MeshData[] GetRenderPathData(RenderingPath path)
-		{
-			if (lastPosition != transform.position || lastRotation != transform.rotation || lastScale != transform.lossyScale)
-			{
-				ClearData();
-				lastPosition = transform.position;
-				lastRotation = transform.rotation;
-				lastScale = transform.lossyScale;
-			}
-			return base.GetRenderPathData(path);
+			foreach (var o in instances)
+				o.obj = this;
+			return base.GetDrawsUncached();
 		}
 	}
 }

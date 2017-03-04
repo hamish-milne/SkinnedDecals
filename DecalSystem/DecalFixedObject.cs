@@ -32,137 +32,126 @@ namespace DecalSystem
 
 		public override bool ScreenSpace => false;
 
+		[SerializeField]
+		protected List<FixedInstance> instances = new List<FixedInstance>();
+
 		[Serializable]
-		protected class FixedChannel : DecalInstance
+		protected class FixedInstance : DecalInstance
 		{
-			[SerializeField, HideInInspector] protected DecalFixedObject obj;
-			[SerializeField] protected Material material;
-			[SerializeField] protected int submesh;
-			protected MaterialPropertyBlock properties;
-			[SerializeField] protected List<Matrix4x4> matrices = new List<Matrix4x4>(8);
+			[NonSerialized]
+			public DecalFixedObject obj;
+			public Matrix4x4 matrix;
+			public int submesh;
 
 			public override DecalObject DecalObject => obj;
 
-			public override bool HasMultipleDecals => matrices.Count > 1;
-
-			protected int GetMaxMatrices()
-			{
-				return DecalMaterial.IsModeSupported(Fixed8) ? 8 : 4;
-			}
-
-			public virtual bool TryAddMatrix(DecalObjectBase obj, DecalMaterial decalMaterial, int submesh, Matrix4x4 matrix)
-			{
-				if (DecalMaterial != decalMaterial || this.submesh != submesh || matrices.Count >= GetMaxMatrices())
-					return false;
-				matrices.Add(matrix);
-				return true;
-			}
-
-			public virtual bool RefreshMatrices(bool force)
-			{
-				bool doRefresh = properties == null || material == null || force;
-				if (!doRefresh) return false;
-				if(properties == null)
-					properties = new MaterialPropertyBlock();
-				else
-					properties.Clear();
-				var ret = UpdateMaterial();
-				// Matrices are stored as decal->object for ease of use, but the shader needs object->decal
-				if (matrices.Count == 1)
-				{
-					properties.SetMatrix(ProjectorSingle, matrices[0].inverse);
-				}
-				else
-				{
-					var dummyMatrix = Matrix4x4.TRS(Vector3.one*float.NegativeInfinity, Quaternion.identity, Vector3.one);
-					var shaderPropertyCount = matrices.Count > 4 ? 8 : 4;
-					properties.SetMatrixArray(ProjectorMulti,
-						matrices.Select(m => m.inverse).Concat(Enumerable.Repeat(dummyMatrix, shaderPropertyCount-matrices.Count)).ToArray());
-					// For Unity < 5.4 (I think)
-					/*for (int i = 0; i < shaderPropertyCount; i++)
-						properties.SetMatrix(ProjectorMulti + i,
-							i < matrices.Count ? matrices[i] : dummyMatrix);*/
-				}
-				return ret;
-			}
-
-			public virtual bool UpdateMaterial()
-			{
-				var newMaterial = DecalMaterial.GetMaterial(matrices.Count > 4 ? Fixed8 :
-					(matrices.Count > 1 ? Fixed4 : FixedSingle));
-				var ret = newMaterial != material;
-				material = newMaterial;
-				return ret;
-			}
-
-			public FixedChannel(DecalFixedObject obj, DecalMaterial decalMaterial, Matrix4x4 matrix)
+			public FixedInstance(DecalFixedObject obj, DecalMaterial decalMaterial, int submesh, Matrix4x4 matrix)
 			{
 				this.obj = obj;
 				this.decalMaterial = decalMaterial;
-				matrices.Add(matrix);
+				this.matrix = matrix;
+				this.submesh = submesh;
 			}
-
-			public MeshData GetMeshData()
-			{
-				return new MeshData
-				{
-					instance = this,
-					material = material,
-					materialPropertyBlock = properties,
-					mesh = obj.Mesh,
-					transform = obj.transform,
-					submesh = submesh
-				};
-			}
-
-			public FixedChannel() { }
 		}
 
-		[SerializeField]
-		protected List<FixedChannel> instances = new List<FixedChannel>();
+		protected class FixedDraw : IDecalDraw
+		{
+			public const int MaxInstances = 8;
+			public int Submesh { get; set; }
+			public DecalMaterial DecalMaterial { get; set; }
+
+			public List<FixedInstance> Instances { get; } = new List<FixedInstance>();
+			public DecalObject DecalObject { get; }
+
+			private readonly MaterialPropertyBlock block = new MaterialPropertyBlock();
+			private Material mat;
+			private readonly List<Matrix4x4> matrixList = new List<Matrix4x4>();
+
+			public void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh,
+				ref Renderer renderer, ref int submesh, ref Material material,
+				ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix)
+			{
+				mesh = DecalObject.Mesh;
+				submesh = Submesh;
+				material = mat;
+				propertyBlock = block;
+				matrix = DecalObject.transform.localToWorldMatrix;
+			}
+
+			public void UpdateMaterial()
+			{
+				var mode = FixedSingle;
+				if (Instances.Count > 1)
+					mode = Fixed4;
+				if (Instances.Count > 4)
+					mode = Fixed8;
+				mat = DecalMaterial?.GetMaterial(mode);
+				block.Clear();
+				if (mode == FixedSingle)
+					block.SetMatrix(ProjectorSingle, Instances[0].matrix);
+				else
+				{
+					matrixList.Clear();
+					foreach(var o in Instances)
+						matrixList.Add(o.matrix);
+					block.SetMatrixArray(ProjectorMulti, matrixList);
+				}
+			}
+
+			public FixedDraw(DecalObject obj)
+			{
+				DecalObject = obj;
+			}
+		}
+
+		private readonly List<FixedDraw> drawGroups = new List<FixedDraw>();
+
+		public override IEnumerable<IDecalDraw> GetDrawsUncached()
+		{
+			foreach(var g in drawGroups)
+				g.Instances.Clear();
+			foreach (var o in instances)
+			{
+				o.obj = this;
+				FixedDraw group = null;
+				foreach (var g in drawGroups)
+				{
+					if (g.Submesh != o.submesh ||
+						g.DecalMaterial != o.DecalMaterial ||
+						g.Instances.Count >= FixedDraw.MaxInstances)
+						continue;
+					group = g;
+					break;
+				}
+				if(group == null)
+					drawGroups.Add(group = new FixedDraw(this) {Submesh = o.submesh, DecalMaterial = o.DecalMaterial});
+				group.Instances.Add(o);
+			}
+			drawGroups.RemoveAll(o => o.Instances.Count == 0);
+			foreach(var g in drawGroups)
+				g.UpdateMaterial();
+			return drawGroups.Cast<IDecalDraw>();
+		}
+
 
 		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
 		{
 			base.AddDecal(projector, decal, submesh);
 			var matrix = transform.worldToLocalMatrix * projector.localToWorldMatrix;
-			var ret = instances.FirstOrDefault(obj => obj.TryAddMatrix(this, decal, submesh, matrix));
-			if (ret == null)
-			{
-				instances.Add(ret = new FixedChannel(this, decal, matrix));
-				ret.UpdateMaterial();
-				ClearData();
-			}
-			if(ret.RefreshMatrices(true))
-				ClearData();
+			var ret = new FixedInstance(this, decal, submesh, matrix);
+			instances.Add(ret);
 			return ret;
 		}
 
-		public override void Refresh(RefreshAction action)
+		public override int Count => instances.Count;
+		public override DecalInstance GetDecal(int index)
 		{
-			base.Refresh(action);
-			if((action & (RefreshAction.MaterialPropertiesChanged | RefreshAction.ChangeInstanceMaterial)) != 0)
-				foreach (var obj in instances)
-					if(obj.UpdateMaterial())
-						ClearData();
+			return instances[index];
 		}
 
-		private void Cleanup()
+		public override bool RemoveDecal(DecalInstance instance)
 		{
-			instances.RemoveAll(obj => obj.DecalMaterial == null);
-		}
-
-		protected override MeshData[] GetDataUncached()
-		{
-			Cleanup();
-			if (instances.Count == 0 || !enabled)
-				return null;
-			return instances
-				.Where(obj => obj.Enabled)
-				.Select(obj =>
-			{
-				obj.RefreshMatrices(false);
-				return obj.GetMeshData();
-			}).ToArray();
+			return instances.Remove(instance as FixedInstance);
 		}
 	}
 }

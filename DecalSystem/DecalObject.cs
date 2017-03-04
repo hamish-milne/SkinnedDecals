@@ -78,6 +78,19 @@ namespace DecalSystem
 		}
 	}
 
+	public interface IDecalDraw
+	{
+		DecalObject DecalObject { get; }
+		DecalMaterial DecalMaterial { get; }
+		void GetDrawCommand(RenderingPath renderPath,
+			ref Mesh mesh,
+			ref Renderer renderer,
+			ref int submesh,
+			ref Material material,
+			ref MaterialPropertyBlock propertyBlock,
+			ref Matrix4x4 matrix);
+	}
+
 	/// <summary>
 	/// Defines the action(s) that triggered a Refresh of the given object
 	/// </summary>
@@ -114,8 +127,7 @@ namespace DecalSystem
 		/// </summary>
 		RendererChanged = 1 << 4,
 	}
-
-	/// TODO: Separate from DecalChannel
+	
 	/// <summary>
 	/// Represents one (or more) decal instances
 	/// </summary>
@@ -154,6 +166,36 @@ namespace DecalSystem
 		{
 			get { return decalMaterial; }
 			set { decalMaterial = value; DecalObject.Refresh(RefreshAction.ChangeInstanceMaterial); }
+		}
+	}
+
+	[Serializable]
+	public abstract class DecalInstanceBase : DecalInstance, IDecalDraw
+	{
+		public abstract Matrix4x4? LocalMatrix { get; }
+		
+		public abstract string ModeString { get; }
+
+		protected Matrix4x4 DefaultMatrix()
+		{
+			Matrix4x4 m;
+			var transform = DecalObject?.transform;
+			var matrix = LocalMatrix;
+			if (transform != null && matrix != null)
+				m = transform.localToWorldMatrix * matrix.Value;
+			else if (transform != null)
+				m = transform.localToWorldMatrix;
+			else if (matrix != null)
+				m = matrix.Value;
+			else
+				throw new Exception("No matrix or transform defined");
+			return m;
+		}
+
+		public virtual void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix)
+		{
+			matrix = DefaultMatrix();
+			material = DecalMaterial?.GetMaterial(ModeString);
 		}
 	}
 
@@ -265,12 +307,23 @@ namespace DecalSystem
 		/// </summary>
 		public abstract bool ScreenSpace { get; }
 
+		public abstract int Count { get; }
+
+		public abstract DecalInstance GetDecal(int index);
+
+		public virtual bool RemoveDecal(int index)
+		{
+			return RemoveDecal(GetDecal(index));
+		}
+
+		public abstract bool RemoveDecal(DecalInstance instance);
+
 		/// <summary>
 		/// Gets the collection of draw commands for the given rendering path
 		/// </summary>
 		/// <param name="path"></param>
 		/// <returns>The rendering data, cached at this level, or <c>null</c></returns>
-		public abstract MeshData[] GetRenderPathData(RenderingPath path);
+		public abstract IDecalDraw[] GetRenderPathData();
 
 		/// <summary>
 		/// Adds a new decal to this instance
@@ -375,38 +428,35 @@ namespace DecalSystem
 		/// Whether to require <c>DecalManager.RenderObject</c> to be called for this object
 		/// </summary>
 		public override bool UseManualCulling => false;
-
-		private MeshData[] cachedData;
 		
-		// TODO: On material changed (not properties)
 		public override void Refresh(RefreshAction action)
 		{
 			base.Refresh(action);
 			if((action & RefreshAction.EnableDisable) != 0)
-				ClearData();
+				NotifyDataChanged();
 		}
 
-		/// <summary>
-		/// Clears the cached data
-		/// </summary>
-		protected void ClearData(bool notify = true)
+		public virtual void ClearData(bool notify = true)
 		{
-			if (cachedData != null)
-			{
-				cachedData = null;
-				if(notify)
-					NotifyDataChanged();
-			}
+			drawArray = null;
+			if(notify)
+				NotifyDataChanged();
 		}
 
-		public override MeshData[] GetRenderPathData(RenderingPath path)
+		private IDecalDraw[] drawArray;
+
+		public override IDecalDraw[] GetRenderPathData()
 		{
-			if (!enabled)
-				return null;
-			return cachedData ?? (cachedData = GetDataUncached());
+			return drawArray ?? (drawArray = GetDrawsUncached().ToArray());
 		}
 
-		protected abstract MeshData[] GetDataUncached();
+		public virtual IEnumerable<IDecalDraw> GetDrawsUncached()
+		{
+			return Enumerable.Range(0, Count)
+				.Select(GetDecal)
+				.Where(d => d.Enabled)
+				.OfType<IDecalDraw>();
+		}
 
 		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
 		{
@@ -416,6 +466,7 @@ namespace DecalSystem
 				throw new ArgumentNullException(nameof(decal));
 			if(ScreenSpace ? submesh >= 0 : (submesh < 0 || submesh >= Mesh.subMeshCount))
 				throw new ArgumentOutOfRangeException(nameof(submesh));
+			ClearData();
 			return null;
 		}
 
