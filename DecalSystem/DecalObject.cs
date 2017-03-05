@@ -192,7 +192,9 @@ namespace DecalSystem
 			return m;
 		}
 
-		public virtual void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix)
+		public virtual void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh,
+			ref Renderer renderer, ref int submesh, ref Material material,
+			ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix)
 		{
 			matrix = DefaultMatrix();
 			material = DecalMaterial?.GetMaterial(ModeString);
@@ -323,7 +325,7 @@ namespace DecalSystem
 		/// </summary>
 		/// <param name="path"></param>
 		/// <returns>The rendering data, cached at this level, or <c>null</c></returns>
-		public abstract IDecalDraw[] GetRenderPathData();
+		public abstract IDecalDraw[] GetDecalDraws();
 
 		/// <summary>
 		/// Adds a new decal to this instance
@@ -445,7 +447,7 @@ namespace DecalSystem
 
 		private IDecalDraw[] drawArray;
 
-		public override IDecalDraw[] GetRenderPathData()
+		public override IDecalDraw[] GetDecalDraws()
 		{
 			return drawArray ?? (drawArray = GetDrawsUncached().ToArray());
 		}

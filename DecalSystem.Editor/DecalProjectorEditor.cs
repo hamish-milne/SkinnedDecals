@@ -49,52 +49,33 @@ namespace DecalSystem.Editor
 			GUILayout.EndHorizontal();
 		}
 
-		/*[InitializeOnLoadMethod]
-		protected static void AddEditorUpdate()
+		
+		// Unity only 'updates' the scene view when something within the scene changes
+		// This would be fine, but reloading scripts will remove command buffers and drawmesh calls
+		// And reloading scripts doesn't count as changing the scene.
+		// Ultimately the effect is that the decals temporarily vanish when scripts are changed. Not a good look.
+		// So we need to manually make some small modification and then undo it..
+		// .. but not on the first frame of course. How silly. The *second* frame.
+
+		[InitializeOnLoadMethod]
+		protected static void RepaintOnRecompile()
 		{
-			int repaintOnDisable = 0;
-			EditorWindow lastRepainted = null;
-			EditorApplication.update += () =>
+			EditorApplication.update += ModifySceneToForceUpdate;
+		}
+
+		private static int frameCount = 0;
+
+		private static void ModifySceneToForceUpdate()
+		{
+			if (frameCount >= 1)
 			{
-				if (EditorApplication.isPlayingOrWillChangePlaymode) return;
-				try
-				{
-					if (DecalManager.Current == null)
-					{
-						// Repaint 2 frames after decals are disabled
-						if (repaintOnDisable > 0)
-						{
-							SceneView.RepaintAll();
-							repaintOnDisable--;
-						}
-					}
-					else
-					{
-						if (DecalManager.Current.RepaintIfRequired())
-							SceneView.RepaintAll();
-						repaintOnDisable = 2;
-					}
-				}
-				catch (Exception e)
-				{
-					Debug.LogException(e);
-					repaintOnDisable = 0;
-					if (DecalManager.Current != null)
-						DecalManager.Current.enabled = false;
-				}
-				foreach (var w in Resources.FindObjectsOfTypeAll<EditorWindow>())
-				{
-					if (w == lastRepainted) continue;
-					if (w.GetType() == typeof(SceneView) || w.GetType().Name == "GameView")
-					{
-						// Only repaint one at a time
-						w.Repaint();
-						lastRepainted = w;
-						break;
-					}
-				}
-			};
-		}*/
+				var go = new GameObject();
+				DestroyImmediate(go);
+				// ReSharper disable once DelegateSubtraction
+				EditorApplication.update -= ModifySceneToForceUpdate;
+			}
+			frameCount++;
+		}
 
 		[MenuItem("GameObject/Add Decal Object", false, 0)]
 		protected static void AddDecalObject()

@@ -18,11 +18,6 @@ namespace DecalSystem
 		[Serializable]
 		protected class CameraData
 		{
-			/// <summary>
-			/// The camera to render to
-			/// </summary>
-			public Camera camera;
-
 			public CameraEvent cameraEvent;
 
 			/// <summary>
@@ -36,7 +31,7 @@ namespace DecalSystem
 		/// </summary>
 		[SerializeField] protected bool renderSceneCamera = true;
 
-		private CameraData[] cameraData;
+		private readonly Dictionary<Camera, CameraData> cameraData = new Dictionary<Camera, CameraData>();
 
 		protected class RenderPathData
 		{
@@ -44,9 +39,6 @@ namespace DecalSystem
 
 			public bool requireDepthTexture;
 		}
-
-		private readonly Dictionary<RenderingPath, RenderPathData> renderPathData
-			= new Dictionary<RenderingPath, RenderPathData>();
 
 		/// <summary>
 		/// The currently enabled manager instance
@@ -96,19 +88,18 @@ namespace DecalSystem
 		{
 			if (Current == this)
 				Current = null;
-			if(cameraData != null)
-				foreach (var cd in cameraData)
+			foreach (var pair in cameraData)
+			{
+				var cd = pair.Value;
+				if (cd.command != null)
 				{
-					if (cd.camera == null) return;
-					if (cd.command != null)
-					{
-						cd.camera.RemoveCommandBuffer(cd.cameraEvent, cd.command);
-						cd.command.Dispose();
-					}
-					// TODO: Figure out when we change this
-					cd.camera.depthTextureMode = DepthTextureMode.None;
+					pair.Key.RemoveCommandBuffer(cd.cameraEvent, cd.command);
+					cd.command.Dispose();
 				}
-			cameraData = null;
+				// TODO: Figure out when we change this
+				pair.Key.depthTextureMode = DepthTextureMode.None;
+			}
+			cameraData.Clear();
 			cameraArray = null;
 			prevCameraArray = null;
 			prevRenderingPaths.Clear();
@@ -191,17 +182,15 @@ namespace DecalSystem
 
 		public void ClearDataNow()
 		{
-			if (cameraData != null)
-				foreach (var cd in cameraData)
+			foreach (var cd in cameraData)
+			{
+				if (cd.Value.command != null)
 				{
-					if (cd.command != null)
-					{
-						cd.camera.RemoveCommandBuffer(cd.cameraEvent, cd.command);
-						cd.command.Dispose();
-					}
+					cd.Key.RemoveCommandBuffer(cd.Value.cameraEvent, cd.Value.command);
+					cd.Value.command.Dispose();
 				}
-			cameraData = null;
-			renderPathData.Clear();
+			}
+			cameraData.Clear();
 		}
 
 		// Stores the previous camera setup, to detect changes
@@ -265,6 +254,9 @@ namespace DecalSystem
 				DecalObject.RefreshAll(RefreshAction.CamerasChanged);
 				return true;
 			}
+			foreach(var cam in cameraArray)
+				if (cam.GetComponent<DecalCamera>() == null)
+					cam.gameObject.AddComponent<DecalCamera>();
 			for (int i = 0; i < cameraArray.Length; i++)
 			{
 				var prevPath = RenderingPath.UsePlayerSettings;
@@ -289,13 +281,13 @@ namespace DecalSystem
 		/// </summary>
 		/// <param name="cd"></param>
 		/// <returns></returns>
-		protected CommandBuffer GetCommandBuffer(CameraData cd)
+		protected CommandBuffer GetCommandBuffer(Camera cam, CameraData cd)
 		{
 			const string commandName = "Draw decals (DecalSystem)";
 			if (cd.command == null)
 			{
-				var evt = GetCameraEvent(cd.camera.actualRenderingPath);
-				var cmds = cd.camera.GetCommandBuffers(evt);
+				var evt = GetCameraEvent(cam.actualRenderingPath);
+				var cmds = cam.GetCommandBuffers(evt);
 				foreach(var cmd in cmds)
 					if (cmd.name == commandName)
 					{
@@ -306,7 +298,7 @@ namespace DecalSystem
 				{
 					cd.command = new CommandBuffer {name = commandName};
 					cd.cameraEvent = evt;
-					cd.camera.AddCommandBuffer(evt, cd.command);
+					cam.AddCommandBuffer(evt, cd.command);
 					SetupCommandBuffer(cd, cd.command);
 				}
 				else
@@ -317,122 +309,82 @@ namespace DecalSystem
 			return cd.command;
 		}
 
-		protected virtual bool CanUseDrawMesh(RenderingPath rp, MeshData md)
+		protected virtual bool CanUseDrawMesh(RenderingPath rp, DecalMaterial dmat, Material mat)
 		{
-			return !(rp == RenderingPath.DeferredShading && md.instance.DecalMaterial.RequiresDepthTexture(md.material));
-		}
-
-		protected void RebuildCameraDataIfNeeded()
-		{
-			if (CheckCameras())
-			{
-				Debug.Log("Rebuilding camera data");
-				var activeObjects = DecalObject.ActiveObjects;
-				ClearDataNow();
-				var list = new List<CameraData>();
-				foreach (var cam in cameraArray)
-				{
-					var cd = new CameraData { camera = cam };
-					if (cam.GetComponent<DecalCamera>() == null)
-						cam.gameObject.AddComponent<DecalCamera>();
-					var rp = cam.actualRenderingPath;
-					RenderPathData data;
-					if (!renderPathData.TryGetValue(rp, out data))
-					{
-						renderPathData.Add(rp, data = new RenderPathData());
-						// ReSharper disable once ForCanBeConvertedToForeach
-						for (int i = 0; i < activeObjects.Count; i++)
-						{
-							var rpd = activeObjects[i].GetRenderPathData(rp);
-							if (rpd == null)
-								continue;
-							foreach (var md in rpd)
-							{
-								if (md.mesh == null) continue;
-								if (md.instance == null)
-								{
-									Debug.LogError($"Mesh data from {activeObjects[i]} does not set an instance");
-									continue;
-								}
-								data.requireDepthTexture |= md.instance.DecalMaterial?.RequiresDepthTexture(md.material) ?? false;
-								data.meshList.Add(md);
-							}
-						}
-					}
-						
-					cam.depthTextureMode = data.requireDepthTexture ? DepthTextureMode.Depth : DepthTextureMode.None;
-					list.Add(cd);
-				}
-				cameraData = list.ToArray();
-			}
+			return !(rp == RenderingPath.DeferredShading && dmat.RequiresDepthTexture(mat));
 		}
 		
 		public void DrawDecals(Camera cam)
 		{
-			var cd = cameraData.FirstOrDefault(o => o.camera = cam);
-			if (cd == null) return;
+			CameraData cd;
+			if (!cameraData.TryGetValue(cam, out cd))
+				cameraData.Add(cam, cd = new CameraData());
+			if (cd.command != null)
 			{
-				if (cd.command != null)
-				{
-					cd.command.Clear();
-					SetupCommandBuffer(cd, cd.command);
-				}
+				cd.command.Clear();
+				SetupCommandBuffer(cd, cd.command);
+			}
 
-				var rp = cd.camera.actualRenderingPath;
-				RenderPathData data;
-				if (!renderPathData.TryGetValue(rp, out data)) return;
-				for (var i = 0; i < data.meshList.Count; i++)
+			var rp = cam.actualRenderingPath;
+			bool requireDepth = false;
+			var activeObjects = DecalObject.ActiveObjects;
+			// ReSharper disable once ForCanBeConvertedToForeach
+			for (int j = 0; j < activeObjects.Count; j++)
+			{
+				var obj = activeObjects[j];
+				foreach (var draw in obj.GetDecalDraws())
 				{
-					var md = data.meshList[i];
-					var obj = md.instance?.DecalObject;
 					try
 					{
-						if (obj == null)
-							throw new Exception($"Decal {md.instance} has no parent object");
-						var useCommandBuffer = md.renderer != null;
-						useCommandBuffer |= md.mesh != null && !CanUseDrawMesh(rp, md);
-						var material = md.instance.DecalMaterial?.ModifyMaterial(md.material, rp) ??
-						               md.material;
+						Mesh mesh = null;
+						Renderer rend = null;
+						int submesh = 0;
+						Material material = null;
+						MaterialPropertyBlock block = null;
+						var matrix = Matrix4x4.identity;
+
+						draw.GetDrawCommand(rp, ref mesh, ref rend, ref submesh, ref material, ref block, ref matrix);
+						if (material == null || (rend == null && mesh == null)) continue;
+
+						material = draw.DecalMaterial?.ModifyMaterial(material, rp) ?? material;
+						var useCommandBuffer = rend != null;
+						useCommandBuffer |= mesh != null && !CanUseDrawMesh(rp, draw.DecalMaterial, material);
+						requireDepth |= draw.DecalMaterial.RequiresDepthTexture(material);
+
 						if (useCommandBuffer)
 						{
 							// Culling
-							if (obj.UseManualCulling && toRender.Contains(new KeyValuePair<DecalObject, Camera>(obj, cd.camera)))
+							if (obj.UseManualCulling && toRender.Contains(new KeyValuePair<DecalObject, Camera>(obj, cam)))
 								continue;
-							var cmd = GetCommandBuffer(cd);
-							var passes = md.instance.DecalMaterial?.GetKnownPasses(rp);
+							var cmd = GetCommandBuffer(cam, cd);
+							var passes = draw.DecalMaterial?.GetKnownPasses(rp);
 							if (passes == null)
-								throw new Exception($"Unable to determine pass order for decal with {md.instance}");
-							if (md.renderer != null)
+								throw new Exception($"Unable to determine pass order for decal with {draw}");
+							if (rend != null)
 							{
 								foreach (var pass in passes)
-									cmd.DrawRenderer(md.renderer, material, md.submesh, pass);
+									cmd.DrawRenderer(rend, material, submesh, pass);
 							}
 							else
 							{
-								var matrix = md.GetFinalMatrix();
-								if (matrix == null)
-									throw new Exception($"No matrix for decal {md.instance}");
 								foreach (var pass in passes)
-									cmd.DrawMesh(md.mesh, matrix.Value, material, md.submesh, pass, md.materialPropertyBlock);
+									cmd.DrawMesh(mesh, matrix, material, submesh, pass, block);
 							}
 						}
-						else if (md.mesh != null)
+						else if (mesh != null)
 						{
-							var matrix = md.GetFinalMatrix();
-							if (matrix == null)
-								throw new Exception($"No matrix for decal {md.instance}");
-							Graphics.DrawMesh(md.mesh, matrix.Value, material, 0, //Default layer
-								cd.camera, md.submesh, md.materialPropertyBlock, false, true);
+							Graphics.DrawMesh(mesh, matrix, material, 0, //Default layer
+								cam, submesh, block, false, true);
 						}
 					}
 					catch (Exception e)
 					{
 						Debug.LogException(e, obj);
-						data.meshList.RemoveAt(i--);
 					}
 				}
-				//Debug.Log(data.meshList.Count);
 			}
+
+			cam.depthTextureMode = requireDepth ? DepthTextureMode.Depth : DepthTextureMode.None;
 			toRender.Clear();
 		}
 
@@ -444,7 +396,7 @@ namespace DecalSystem
 				ClearDataNow();
 				doClearData = false;
 			}
-			RebuildCameraDataIfNeeded();
+			CheckCameras();
 		}
 
 		protected virtual void Update()

@@ -69,11 +69,21 @@ namespace DecalSystem
 				set { obj.decalMaterial = value; }
 			}
 
+			public override void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh,
+				ref Renderer renderer, ref int submesh, ref Material material,
+				ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix)
+			{
+				base.GetDrawCommand(renderPath, ref mesh, ref renderer, ref submesh, ref material, ref propertyBlock, ref matrix);
+				mesh = DecalScreenSpaceObject.CubeMesh;
+			}
+
 			public override bool Enabled
 			{
 				get { return obj.enabled; }
 				set { obj.enabled = value; }
 			}
+
+			
 
 			public DecalInstanceSingle(DecalSingle obj)
 			{
@@ -88,7 +98,7 @@ namespace DecalSystem
 				NotifyDataChanged();
 		}
 
-		public override IDecalDraw[] GetRenderPathData()
+		public override IDecalDraw[] GetDecalDraws()
 		{
 			return enabled ? drawArray : null;
 		}

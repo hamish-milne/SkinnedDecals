@@ -37,7 +37,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.18028377, g: 0.22571409, b: 0.30692285, a: 1}
+  m_IndirectSpecularColor: {r: 0.16788329, g: 0.21073541, b: 0.2899403, a: 1}
 --- !u!157 &3
 LightmapSettings:
   m_ObjectHideFlags: 0
@@ -91,74 +91,6 @@ NavMeshSettings:
     cellSize: 0.16666667
     accuratePlacement: 0
   m_NavMeshData: {fileID: 0}
---- !u!21 &5234118
-Material:
-  serializedVersion: 6
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_Name: TestDecal_FIXEDSINGLE
-  m_Shader: {fileID: 4800000, guid: 750aca623e2b86247859ddf14816223f, type: 3}
-  m_ShaderKeywords: _FIXEDSINGLE _NORMALMAP
-  m_LightmapFlags: 5
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  m_SavedProperties:
-    serializedVersion: 2
-    m_TexEnvs:
-    - first:
-        name: _BumpMap
-      second:
-        m_Texture: {fileID: 2800000, guid: 3b5b7be0f2332c24f89a2af018daa62d, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - first:
-        name: _EmissionMap
-      second:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - first:
-        name: _MainTex
-      second:
-        m_Texture: {fileID: 2800000, guid: 7c5c3313ecb5b8142a446c2304d0dc2b, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - first:
-        name: _MetallicGlossMap
-      second:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - first:
-        name: _ParallaxMap
-      second:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Floats:
-    - first:
-        name: _BumpScale
-      second: 1
-    - first:
-        name: _Cull
-      second: 2
-    - first:
-        name: _Glossiness
-      second: 0.664
-    - first:
-        name: _Metallic
-      second: 1
-    - first:
-        name: _Parallax
-      second: 0.08
-    m_Colors:
-    - first:
-        name: _Color
-      second: {r: 1, g: 1, b: 1, a: 1}
-    - first:
-        name: _EmissionColor
-      second: {r: 0, g: 0, b: 0, a: 1}
 --- !u!4 &40366702 stripped
 Transform:
   m_PrefabParentObject: {fileID: 400248, guid: b235179bd2a63d1468dd430670338c55, type: 3}
@@ -480,6 +412,7 @@ GameObject:
   - component: {fileID: 430241330}
   - component: {fileID: 430241329}
   - component: {fileID: 430241328}
+  - component: {fileID: 430241333}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -533,7 +466,7 @@ Camera:
   m_CullingMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_RenderingPath: 1
+  m_RenderingPath: 3
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
   m_TargetEye: 3
@@ -555,6 +488,17 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 14.7, y: 48.09, z: 0}
+--- !u!114 &430241333
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 430241327}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 984057531, guid: 985b4d1823d2b41469085ab826add42f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!4 &433059825 stripped
 Transform:
   m_PrefabParentObject: {fileID: 400324, guid: b235179bd2a63d1468dd430670338c55, type: 3}
@@ -645,7 +589,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 486009656}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -2.07, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -703,6 +647,126 @@ MonoBehaviour:
       e31: 0
       e32: 0
       e33: 1
+  - enabled: 1
+    decalMaterial: {fileID: 11400000, guid: 627d98932191643449a766d37052ef88, type: 2}
+    obj: {fileID: 486009661}
+    matrix:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: -0.68600035
+      e10: 0
+      e11: -0.00000011920929
+      e12: -1.0000001
+      e13: 0.44100004
+      e20: 0
+      e21: 1.0000001
+      e22: -0.00000011920929
+      e23: -1.711
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+  - enabled: 1
+    decalMaterial: {fileID: 11400000, guid: 627d98932191643449a766d37052ef88, type: 2}
+    obj: {fileID: 486009661}
+    matrix:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: -2.7560003
+      e10: 0
+      e11: -0.00000011920929
+      e12: -1.0000001
+      e13: -0.20299995
+      e20: 0
+      e21: 1.0000001
+      e22: -0.00000011920929
+      e23: -1.711
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+  - enabled: 1
+    decalMaterial: {fileID: 11400000, guid: 627d98932191643449a766d37052ef88, type: 2}
+    obj: {fileID: 486009661}
+    matrix:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: -1.7549999
+      e10: 0
+      e11: -0.00000011920929
+      e12: -1.0000001
+      e13: -0.20299995
+      e20: 0
+      e21: 1.0000001
+      e22: -0.00000011920929
+      e23: -0.77800006
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+  - enabled: 1
+    decalMaterial: {fileID: 11400000, guid: 627d98932191643449a766d37052ef88, type: 2}
+    obj: {fileID: 486009661}
+    matrix:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: -2.344
+      e10: 0
+      e11: -0.00000011920929
+      e12: -1.0000001
+      e13: -0.20299995
+      e20: 0
+      e21: 1.0000001
+      e22: -0.00000011920929
+      e23: -0.902
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+  - enabled: 1
+    decalMaterial: {fileID: 11400000, guid: 627d98932191643449a766d37052ef88, type: 2}
+    obj: {fileID: 486009661}
+    matrix:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: -2.344
+      e10: 0
+      e11: -0.00000011920929
+      e12: -1.0000001
+      e13: -0.203
+      e20: 0
+      e21: 1.0000001
+      e22: -0.00000011920929
+      e23: -3.632
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+  - enabled: 1
+    decalMaterial: {fileID: 11400000, guid: 627d98932191643449a766d37052ef88, type: 2}
+    obj: {fileID: 486009661}
+    matrix:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: -2.344
+      e10: 0
+      e11: -0.00000011920929
+      e12: -1.0000001
+      e13: -0.203
+      e20: 0
+      e21: 1.0000001
+      e22: -0.00000011920929
+      e23: -2.702
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
   bounds:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 5, y: 0.5, z: 5}
@@ -736,12 +800,12 @@ Transform:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 546740848}
-  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: -2.8, y: -1.425, z: -3.822}
+  m_LocalRotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
+  m_LocalPosition: {x: -2.344, y: -0.203, z: -2.702}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
-  m_Father: {fileID: 1167607804}
-  m_RootOrder: 0
+  m_Father: {fileID: 0}
+  m_RootOrder: 11
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
 --- !u!114 &546740851
 MonoBehaviour:
@@ -1111,7 +1175,7 @@ MeshRenderer:
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 3
   m_Materials:
-  - {fileID: 2100000, guid: e5aac7ba2d75aad46aaa0259e5f1b26c, type: 2}
+  - {fileID: 10302, guid: 0000000000000000f000000000000000, type: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1157,8 +1221,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 2.248, y: 0.98, z: 0.728}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children:
-  - {fileID: 546740850}
+  m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1177,7 +1240,7 @@ MonoBehaviour:
   - enabled: 1
     decalMaterial: {fileID: 11400000, guid: 627d98932191643449a766d37052ef88, type: 2}
     obj: {fileID: 1167607805}
-    material: {fileID: 5234118}
+    material: {fileID: 1313973323}
     submesh: 0
     matrices:
     - e00: 1
@@ -1216,6 +1279,74 @@ Transform:
 Transform:
   m_PrefabParentObject: {fileID: 400276, guid: b235179bd2a63d1468dd430670338c55, type: 3}
   m_PrefabInternal: {fileID: 997412427}
+--- !u!21 &1313973323
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_Name: TestDecal_FIXEDSINGLE
+  m_Shader: {fileID: 4800000, guid: c0843ba2f2e7eea4b8ec3c8634ce245c, type: 3}
+  m_ShaderKeywords: _FIXEDSINGLE _NORMALMAP
+  m_LightmapFlags: 5
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  m_SavedProperties:
+    serializedVersion: 2
+    m_TexEnvs:
+    - first:
+        name: _BumpMap
+      second:
+        m_Texture: {fileID: 2800000, guid: 3b5b7be0f2332c24f89a2af018daa62d, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - first:
+        name: _EmissionMap
+      second:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - first:
+        name: _MainTex
+      second:
+        m_Texture: {fileID: 2800000, guid: 7c5c3313ecb5b8142a446c2304d0dc2b, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - first:
+        name: _MetallicGlossMap
+      second:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - first:
+        name: _ParallaxMap
+      second:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Floats:
+    - first:
+        name: _BumpScale
+      second: 1
+    - first:
+        name: _Cull
+      second: 2
+    - first:
+        name: _Glossiness
+      second: 0.74
+    - first:
+        name: _Metallic
+      second: 1
+    - first:
+        name: _Parallax
+      second: 0.08
+    m_Colors:
+    - first:
+        name: _Color
+      second: {r: 1, g: 1, b: 1, a: 1}
+    - first:
+        name: _EmissionColor
+      second: {r: 0, g: 0, b: 0, a: 1}
 --- !u!4 &1331695286 stripped
 Transform:
   m_PrefabParentObject: {fileID: 400224, guid: b235179bd2a63d1468dd430670338c55, type: 3}
@@ -1261,7 +1392,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!23 &1470084315
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -1319,7 +1450,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1470084314}
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: -0.98, y: -0.03, z: -1.979}
+  m_LocalPosition: {x: -0.98, y: -0.142, z: -2.344}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -1411,7 +1542,8 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 1.9411259, y: 1.82, z: -2.07}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
+  m_Children:
+  - {fileID: 1539664070}
   m_Father: {fileID: 0}
   m_RootOrder: 10
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1449,13 +1581,13 @@ Transform:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1539664068}
-  m_LocalRotation: {x: 0.594729, y: 0.29478356, z: -0.3082189, w: 0.68146986}
-  m_LocalPosition: {x: -4.1, y: 0.008, z: -1.147}
+  m_LocalRotation: {x: 0.6321211, y: 0.6982012, z: 0.22164026, w: 0.25261384}
+  m_LocalPosition: {x: 0.029874086, y: -0.0040000677, z: 0.05499983}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
-  m_Father: {fileID: 0}
-  m_RootOrder: 11
-  m_LocalEulerAnglesHint: {x: -277.117, y: 16.486, z: -394.095}
+  m_Father: {fileID: 1518098351}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: -359.435, y: 140.729, z: -275.88898}
 --- !u!4 &1573566733 stripped
 Transform:
   m_PrefabParentObject: {fileID: 400264, guid: b235179bd2a63d1468dd430670338c55, type: 3}
@@ -1496,7 +1628,7 @@ MeshRenderer:
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 3
   m_Materials:
-  - {fileID: 2100000, guid: e5aac7ba2d75aad46aaa0259e5f1b26c, type: 2}
+  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1562,7 +1694,7 @@ MonoBehaviour:
   - enabled: 1
     decalMaterial: {fileID: 11400000, guid: 627d98932191643449a766d37052ef88, type: 2}
     obj: {fileID: 1593965148}
-    material: {fileID: 5234118}
+    material: {fileID: 1313973323}
     submesh: 0
     matrices:
     - e00: 1
