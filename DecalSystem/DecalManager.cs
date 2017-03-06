@@ -137,7 +137,7 @@ namespace DecalSystem
 					return CameraEvent.AfterForwardOpaque;
 				case RenderingPath.DeferredShading:
 					return CameraEvent.BeforeReflections;
-					//CameraEvent.AfterGBuffer;
+					//CameraEvent.AfterGBuffer; // See below for why not
 				case RenderingPath.DeferredLighting:
 					return CameraEvent.AfterFinalPass;
 				case RenderingPath.VertexLit:
@@ -159,36 +159,14 @@ namespace DecalSystem
 
 		protected virtual void SetupCommandBuffer(CameraData cd, CommandBuffer cmd)
 		{
+			// To draw screen-space decals, we need a depth texture for *this* frame
+			// Just using AfterGBuffer, the depth is from the previous frame, which causes flickering
 			// BeforeReflections is after the G-buffer *and* after depth is resolved
 			// But, we need to set the render target back to the G-buffer to draw decals
-			// Just using AfterGBuffer, the depth is from the previous frame, which causes flickering
 			if (cd.cameraEvent == CameraEvent.BeforeReflections)
 			{
 				cmd.SetRenderTarget(gBuffer, depth);
 			}
-		}
-
-		private bool doClearData;
-
-		/// <summary>
-		/// Clears the cached camera data, rebuilding command lists the next frame
-		/// </summary>
-		public void ClearData()
-		{
-			doClearData = true;
-		}
-
-		public void ClearDataNow()
-		{
-			foreach (var cd in cameraData)
-			{
-				if (cd.Value.command != null)
-				{
-					cd.Key.RemoveCommandBuffer(cd.Value.cameraEvent, cd.Value.command);
-					cd.Value.command.Dispose();
-				}
-			}
-			cameraData.Clear();
 		}
 
 		// Stores the previous camera setup, to detect changes
@@ -203,20 +181,13 @@ namespace DecalSystem
 				prevRenderingPaths[c] = c.actualRenderingPath;
 		}
 
-		/// <summary>
-		/// Gets whether the given rendering path is being used currently
-		/// </summary>
-		/// <param name="path"></param>
-		/// <returns><c>true</c> if it is being used, otherwise <c>false</c></returns>
-		public virtual bool RequiresRenderingPath(RenderingPath path)
+		public virtual bool CanDrawRenderers(DecalMaterial material)
 		{
 			GetAllCameras();
-			// ReSharper disable once LoopCanBeConvertedToQuery
 			foreach(var c in cameraArray)
-				// The scene camera sometimes returns incorrect values for its rendering path
-				if (c.actualRenderingPath == path && c != SceneCamera)
-					return true;
-			return false;
+				if (!material.CanDrawRenderers(c.actualRenderingPath))
+					return false;
+			return true;
 		}
 
 		// Retrieves the camera list
@@ -391,12 +362,6 @@ namespace DecalSystem
 
 		public void Repaint()
 		{
-			if (!enabled) return;
-			if (doClearData)
-			{
-				ClearDataNow();
-				doClearData = false;
-			}
 			CheckCameras();
 		}
 

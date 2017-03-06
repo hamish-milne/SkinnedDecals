@@ -56,6 +56,8 @@ namespace DecalSystem
 
 		private Mesh mergedMesh;
 
+		private bool doClearChannels;
+
 		[SerializeField]
 		protected List<SkinnedInstance> instances = new List<SkinnedInstance>();
 
@@ -66,7 +68,7 @@ namespace DecalSystem
 		{
 			[NonSerialized] public DecalSkinnedObject obj;
 
-			public int uvDataStart;
+			[HideInInspector] public int uvDataStart;
 			[HideInInspector] public Vector2[] uvData;
 			public SkinnedChannel channel;
 
@@ -96,11 +98,11 @@ namespace DecalSystem
 				set
 				{
 					if (base.Enabled == value) return;
-					if(value)
+					base.Enabled = value;
+					if (value)
 						obj.AddInstance(this);
 					else
 						RemoveFromChannel();
-					base.Enabled = value;
 				}
 			}
 
@@ -211,7 +213,6 @@ namespace DecalSystem
 		protected class SkinnedBufferChannel : SkinnedChannel, IDecalDraw
 		{
 			private ComputeBuffer buffer;
-			private readonly MaterialPropertyBlock block = new MaterialPropertyBlock();
 
 			public bool Enabled => Instances.Count > 0;
 
@@ -219,7 +220,6 @@ namespace DecalSystem
 			{
 				if (buffer == null)
 					buffer = new ComputeBuffer(uvData.Length, sizeof(float) * 2);
-				//block.SetBuffer(ShaderKeywords.Buffer, buffer);
 				buffer.SetData(uvData);
 			}
 
@@ -227,19 +227,23 @@ namespace DecalSystem
 				ref Renderer renderer, ref int submesh, ref Material material,
 				ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
 			{
-				propertyBlock = block;
-				if (renderPath == RenderingPath.DeferredShading)
+				if (DecalMaterial == null) return;
+				if (DecalMaterial.CanDrawRenderers(renderPath))
 				{
 					renderer = obj.SkinnedRenderer;
-					material = DecalMaterial?.GetMaterial(SkinnedBuffer);
+					material = DecalMaterial.GetMaterial(SkinnedBuffer);
 					buffers.Add(new KeyValuePair<string, ComputeBuffer>(ShaderKeywords.Buffer, buffer));
 				}
 				else
 				{
+					// Need to manually bake mesh - not efficient. Revert to UV method
+					// This happens when a camera starts using the forward path
 					mesh = obj.GetCurrentMesh();
 					matrix = obj.transform.localToWorldMatrix;
-					material = DecalMaterial?.GetMaterial(SkinnedBuffer);
-					block.SetBuffer(ShaderKeywords.Buffer, buffer);
+					material = DecalMaterial.GetMaterial(SkinnedBuffer);
+					propertyBlock = new MaterialPropertyBlock();
+					propertyBlock.SetBuffer(ShaderKeywords.Buffer, buffer);
+					obj.doClearChannels = true;
 				}
 			}
 
@@ -247,6 +251,7 @@ namespace DecalSystem
 
 			public override void Dispose()
 			{
+				Instances.Clear();
 				buffer?.Dispose();
 				buffer = null;
 			}
@@ -298,7 +303,7 @@ namespace DecalSystem
 			private static readonly HashSet<Pair<SkinnedMeshRenderer, UvChannel>> usedChannels
 				= new HashSet<Pair<SkinnedMeshRenderer, UvChannel>>();
 
-			public static SkinnedMeshRenderer[] GetDecalRenderers() => usedChannels.Select(p => p.First).ToArray();
+			public static SkinnedMeshRenderer[] GetDecalRenderers(Transform parent) => usedChannels.Select(p => p.First).Where(p => p != null && p.transform.parent == parent).ToArray();
 
 			public static SkinnedMeshChannel TryCreate(DecalSkinnedObject obj, SkinnedMeshRenderer decalRenderer,
 				UvChannel uvChannel)
@@ -328,7 +333,7 @@ namespace DecalSystem
 
 		protected virtual SkinnedChannel CreateChannel(DecalMaterial material)
 		{
-			if (material.IsModeSupported(SkinnedBuffer))
+			if (material.IsModeSupported(SkinnedBuffer) && DecalManager.Current.CanDrawRenderers(material))
 			{
 				var ret = new SkinnedBufferChannel(this);
 				channels.Add(ret);
@@ -353,7 +358,7 @@ namespace DecalSystem
 				}
 				// Failing that, create a new renderer
 				// Don't save these; they are re-created when needed and just clutter up the scene file
-				var go = new GameObject(decalRendererName) {hideFlags = HideFlags.DontSave};
+				var go = new GameObject(decalRendererName) {hideFlags = HideFlags.HideAndDontSave};
 				go.transform.parent = transform;
 				var dr = go.AddComponent<SkinnedMeshRenderer>();
 				// Merge submeshes into one, allowing materials to just be put into one big list
@@ -389,11 +394,12 @@ namespace DecalSystem
 		{
 			foreach (var o in instances)
 				o.channel = null;
-			foreach (var r in SkinnedMeshChannel.GetDecalRenderers())
+			foreach (var r in SkinnedMeshChannel.GetDecalRenderers(transform))
 				DestroyImmediate(r.gameObject);
 			foreach (var c in channels)
 				c.Dispose();
 			channels.Clear();
+			ClearData();
 		}
 
 		protected virtual void AddInstance(SkinnedInstance inst)
@@ -482,6 +488,16 @@ namespace DecalSystem
 		protected virtual void OnWillRenderObject()
 		{
 			DecalManager.Current?.RenderObject(this, Camera.current);
+		}
+
+		public override IDecalDraw[] GetDecalDraws()
+		{
+			if (doClearChannels)
+			{
+				ClearChannels();
+				doClearChannels = false;
+			}
+			return base.GetDecalDraws();
 		}
 
 		public override IEnumerable<IDecalDraw> GetDrawsUncached()

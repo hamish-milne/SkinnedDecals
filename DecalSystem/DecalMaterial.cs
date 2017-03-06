@@ -186,7 +186,8 @@ namespace DecalSystem
 				prop.materialAction(this, material);
 		}
 
-		struct MaterialCacheKey : IEquatable<MaterialCacheKey>
+		[Serializable]
+		protected struct MaterialCacheKey : IEquatable<MaterialCacheKey>
 		{
 			public string modeKeyword;
 			public string propertyName;
@@ -206,6 +207,38 @@ namespace DecalSystem
 				return (modeKeyword?.GetHashCode() ?? 0)*23 ^ (propertyName?.GetHashCode() ?? 0)*17 ^ value;
 				// ReSharper restore NonReadonlyMemberInGetHashCode
 			}
+		}
+
+		[Serializable]
+		protected struct MaterialCacheEntry
+		{
+			public MaterialCacheKey key;
+			public Material value;
+		}
+
+		// Keeping a persistent cache allows material identity to persist through environment re-loading,
+		// and through multiple sessions if the material instance is saved to disk
+		protected List<MaterialCacheEntry> persistentCache = new List<MaterialCacheEntry>();
+
+		private Material PersistentCacheGet(MaterialCacheKey key)
+		{
+			foreach(var pair in persistentCache)
+				if (pair.key.Equals(key) && pair.value != null)
+					return pair.value;
+			return null;
+		}
+
+		private void PersistentCacheSet(MaterialCacheKey key, Material value)
+		{
+			for(int i = 0; i < persistentCache.Count; i++)
+				if (persistentCache[i].key.Equals(key))
+				{
+					persistentCache[i] = new MaterialCacheEntry { key = key, value = value };
+					return;
+				}
+			// Cleanup null entries
+			persistentCache = persistentCache.Where(pair => pair.value != null).ToList();
+			persistentCache.Add(new MaterialCacheEntry { key = key, value = value });
 		}
 
 		private readonly Dictionary<MaterialCacheKey, Material> materialCache
@@ -266,9 +299,16 @@ namespace DecalSystem
 			}
 			if (mat == null)
 			{
+				mat = PersistentCacheGet(key);
+				if (mat != null)
+					materialCache[key] = mat;
+			}
+			if (mat == null)
+			{
 				materialCache[key] = mat = CreateMaterial(modeString);
 				if(propertyName != null)
 					mat.SetInt(propertyName, value);
+				PersistentCacheSet(key, mat);
 			}
 			return mat;
 		}
@@ -322,5 +362,7 @@ namespace DecalSystem
 		}
 
 		public abstract bool RequiresDepthTexture(Material mat);
+
+		public virtual bool CanDrawRenderers(RenderingPath path) => GetKnownPasses(path) != null;
 	}
 }

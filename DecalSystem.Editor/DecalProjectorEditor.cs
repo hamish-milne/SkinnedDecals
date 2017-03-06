@@ -19,7 +19,8 @@ namespace DecalSystem.Editor
 			if (GUILayout.Button("Project", GUILayout.Width(120f), GUILayout.Height(30f)))
 			{
 				projector.Project();
-				DecalManager.Current?.Repaint();
+				if(DecalManager.Current != null)
+					DecalManager.Current.Repaint();
 				Resources.FindObjectsOfTypeAll<SceneView>().FirstOrDefault()?.Repaint();
 			}
 			GUILayout.FlexibleSpace();
