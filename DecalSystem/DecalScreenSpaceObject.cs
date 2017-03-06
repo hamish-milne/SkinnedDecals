@@ -97,5 +97,11 @@ namespace DecalSystem
 				o.obj = this;
 			return base.GetDrawsUncached();
 		}
+
+		public override void UpdateBackRefs()
+		{
+			foreach (var o in instances)
+				o.obj = this;
+		}
 	}
 }

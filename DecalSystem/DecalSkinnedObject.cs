@@ -79,8 +79,15 @@ namespace DecalSystem
 				{
 					if (base.DecalMaterial == value) return;
 					base.DecalMaterial = value;
-					channel?.Remove(this);
+					RemoveFromChannel();
+					obj.AddInstance(this);
 				}
+			}
+
+			public void RemoveFromChannel()
+			{
+				channel?.Remove(this);
+				channel = null;
 			}
 
 			public override bool Enabled
@@ -92,7 +99,8 @@ namespace DecalSystem
 					if(value)
 						obj.AddInstance(this);
 					else
-						channel?.Remove(this);
+						RemoveFromChannel();
+					base.Enabled = value;
 				}
 			}
 
@@ -150,6 +158,8 @@ namespace DecalSystem
 				}
 				for (int i = instance.uvDataStart, j = 0; j < instance.uvData.Length && i < uvData.Length; i++, j++)
 				{
+					if (float.IsInfinity(uvData[i].x) || float.IsInfinity(instance.uvData[j].x))
+						continue;
 					uvData[i] = instance.uvData[j];
 				}
 				DecalMaterial = instance.DecalMaterial;
@@ -159,11 +169,27 @@ namespace DecalSystem
 
 			public void Remove(SkinnedInstance instance)
 			{
-				if(Instances.Remove(instance))
-					for (int i = instance.uvDataStart, j = 0; j < instance.uvData.Length && i < uvData.Length; i++, j++)
+				if (Instances.Remove(instance))
+				{
+					// If this is the only instance, we can simply kill it
+					if (Instances.Count == 0)
 					{
-						uvData[i] = instance.uvData[j];
+						obj.channels.Remove(this);
+						Dispose();
+						obj.ClearData();
 					}
+					else
+					{
+						// Otherwise clear the parts of the buffer it occupies
+						for (int i = instance.uvDataStart, j = 0; j < instance.uvData.Length && i < uvData.Length; i++, j++)
+						{
+							if (float.IsInfinity(uvData[i].x) || float.IsInfinity(instance.uvData[j].x))
+								continue;
+							uvData[i] = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+						}
+						Update();
+					}
+				}
 			}
 
 			public DecalObject DecalObject => obj;
@@ -180,8 +206,6 @@ namespace DecalSystem
 			}
 
 			public abstract void Dispose();
-
-			public abstract void BindBuffers();
 		}
 
 		protected class SkinnedBufferChannel : SkinnedChannel, IDecalDraw
@@ -189,7 +213,7 @@ namespace DecalSystem
 			private ComputeBuffer buffer;
 			private readonly MaterialPropertyBlock block = new MaterialPropertyBlock();
 
-			public bool Enabled => true;
+			public bool Enabled => Instances.Count > 0;
 
 			public override void Update()
 			{
@@ -199,7 +223,9 @@ namespace DecalSystem
 				buffer.SetData(uvData);
 			}
 
-			public virtual void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
+			public virtual void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh,
+				ref Renderer renderer, ref int submesh, ref Material material,
+				ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
 			{
 				propertyBlock = block;
 				if (renderPath == RenderingPath.DeferredShading)
@@ -211,15 +237,10 @@ namespace DecalSystem
 				else
 				{
 					mesh = obj.GetCurrentMesh();
+					matrix = obj.transform.localToWorldMatrix;
 					material = DecalMaterial?.GetMaterial(SkinnedBuffer);
 					block.SetBuffer(ShaderKeywords.Buffer, buffer);
 				}
-			}
-
-			public override void BindBuffers()
-			{
-				// TODO: Test if this is needed now
-				// block?.SetBuffer(ShaderKeywords.Buffer, buffer);
 			}
 
 			public SkinnedBufferChannel(DecalSkinnedObject obj) : base(obj) { }
@@ -238,6 +259,7 @@ namespace DecalSystem
 			private readonly UvChannel uvChannel;
 			private readonly Mesh decalMesh;
 			private static readonly List<Vector4> uvList = new List<Vector4>();
+			private Material material;
 
 			public override void Update()
 			{
@@ -267,17 +289,10 @@ namespace DecalSystem
 				decalMesh.SetUVs(set, uvList);
 				decalMesh.UploadMeshData(false);
 				var mats = decalRenderer.sharedMaterials;
-				if (mats.Length < 8 || mats[id] == null)
-				{
-					Array.Resize(ref mats, 8);
-					mats[id] = DecalMaterial?.GetMaterial(SkinnedUv, ShaderKeywords.UvChannel, id);
-					decalRenderer.sharedMaterials = mats;
-				}
-			}
-
-			public override void BindBuffers()
-			{
-				// None
+				if (material == null)
+					material = DecalMaterial.GetMaterial(SkinnedUv, ShaderKeywords.UvChannel, id);
+				if (!mats.Contains(material))
+					decalRenderer.sharedMaterials = mats.Where(m => m != null).Concat(new[] {material}).ToArray();
 			}
 
 			private static readonly HashSet<KeyValuePair<SkinnedMeshRenderer, UvChannel>> usedChannels
@@ -297,6 +312,8 @@ namespace DecalSystem
 
 			public override void Dispose()
 			{
+				if (decalRenderer != null)
+					decalRenderer.sharedMaterials = decalRenderer.sharedMaterials.Where(m => m != material).ToArray();
 				usedChannels.Remove(new KeyValuePair<SkinnedMeshRenderer, UvChannel>(decalRenderer, uvChannel));
 				decalRenderer = null;
 			}
@@ -381,7 +398,7 @@ namespace DecalSystem
 
 		protected virtual void AddInstance(SkinnedInstance inst)
 		{
-			if (inst.DecalMaterial == null || inst.channel != null) return;
+			if (!inst.Enabled || inst.DecalMaterial == null || inst.channel != null) return;
 			var added = false;
 			if(AllowMerge)
 				foreach (var c in channels)
@@ -460,9 +477,6 @@ namespace DecalSystem
 		protected virtual void LateUpdate()
 		{
 			bakeRequired = true;
-			// Rebind buffers every frame - workaround for a 'feature' in unity where they sometimes become unbound
-			foreach (var c in channels)
-				c.BindBuffers();
 		}
 
 		protected virtual void OnWillRenderObject()
@@ -486,12 +500,18 @@ namespace DecalSystem
 		public override bool RemoveDecal(DecalInstance instance)
 		{
 			var inst = instance as SkinnedInstance;
-			if (instances.Remove(inst))
+			if (inst != null && instances.Remove(inst))
 			{
-				inst?.channel?.Remove(inst);
+				inst.RemoveFromChannel();
 				return true;
 			}
 			return false;
+		}
+
+		public override void UpdateBackRefs()
+		{
+			foreach (var o in instances)
+				o.obj = this;
 		}
 	}
 }

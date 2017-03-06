@@ -43,6 +43,18 @@ namespace DecalSystem
 			public Matrix4x4 matrix;
 			public int submesh;
 
+			public override bool Enabled
+			{
+				get { return base.Enabled; }
+				set { base.Enabled = value; obj.ClearData(); }
+			}
+
+			public override DecalMaterial DecalMaterial
+			{
+				get { return base.DecalMaterial; }
+				set { base.DecalMaterial = value; obj.ClearData(); }
+			}
+
 			public override DecalObject DecalObject => obj;
 
 			public FixedInstance(DecalFixedObject obj, DecalMaterial decalMaterial, int submesh, Matrix4x4 matrix)
@@ -88,12 +100,12 @@ namespace DecalSystem
 				mat = DecalMaterial?.GetMaterial(mode);
 				block.Clear();
 				if (mode == FixedSingle)
-					block.SetMatrix(ProjectorSingle, Instances[0].matrix);
+					block.SetMatrix(ProjectorSingle, Instances[0].matrix.inverse);
 				else
 				{
 					matrixList.Clear();
 					foreach(var o in Instances)
-						matrixList.Add(o.matrix);
+						matrixList.Add(o.matrix.inverse);
 					block.SetMatrixArray(ProjectorMulti, matrixList);
 				}
 			}
@@ -112,7 +124,7 @@ namespace DecalSystem
 				g.Instances.Clear();
 			foreach (var o in instances)
 			{
-				o.obj = this;
+				if (!o.Enabled || o.DecalMaterial == null) continue;
 				FixedDraw group = null;
 				// ReSharper disable once LoopCanBeConvertedToQuery
 				foreach (var g in drawGroups)
@@ -153,6 +165,12 @@ namespace DecalSystem
 		public override bool RemoveDecal(DecalInstance instance)
 		{
 			return instances.Remove(instance as FixedInstance);
+		}
+
+		public override void UpdateBackRefs()
+		{
+			foreach (var o in instances)
+				o.obj = this;
 		}
 	}
 }

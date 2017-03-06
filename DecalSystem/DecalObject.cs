@@ -129,9 +129,9 @@ namespace DecalSystem
 	[Serializable]
 	public abstract class DecalInstance
 	{
-		[SerializeField, RefreshOnChange(RefreshAction.EnableDisable)]
+		[SerializeField, UseProperty]
 		protected bool enabled = true;
-		[SerializeField, RefreshOnChange(RefreshAction.ChangeInstanceMaterial)]
+		[SerializeField, UseProperty]
 		protected DecalMaterial decalMaterial;
 
 		/// <summary>
@@ -140,7 +140,7 @@ namespace DecalSystem
 		public virtual bool Enabled
 		{
 			get { return enabled; }
-			set { enabled = value; DecalObject.ClearData(); }
+			set { enabled = value; }
 		}
 
 		/// <summary>
@@ -380,6 +380,8 @@ namespace DecalSystem
 					ObjectChangeState?.Invoke(this, false);
 			}
 		}
+
+		public abstract void UpdateBackRefs();
 	}
 
 	/// <summary>
@@ -405,6 +407,8 @@ namespace DecalSystem
 
 		public override IDecalDraw[] GetDecalDraws()
 		{
+			if(Application.isEditor)
+				UpdateBackRefs();
 			return drawArray ?? (drawArray = GetDrawsUncached().ToArray());
 		}
 
@@ -431,6 +435,7 @@ namespace DecalSystem
 		{
 			base.OnEnable();
 			ClearData();
+			UpdateBackRefs();
 		}
 
 		protected override void OnDisable()

@@ -98,5 +98,10 @@ namespace DecalSystem
 		{
 			return enabled ? drawArray : null;
 		}
+
+		public override void UpdateBackRefs()
+		{
+			// None
+		}
 	}
 }
