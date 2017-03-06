@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace DecalSystem
@@ -18,7 +19,7 @@ namespace DecalSystem
 		public virtual DecalMaterial DecalMaterial
 		{
 			get { return decalMaterial; }
-			set { decalMaterial = value; NotifyDataChanged(); }
+			set { decalMaterial = value; }
 		}
 
 		private readonly IDecalDraw[] drawArray = new IDecalDraw[1];
@@ -69,11 +70,9 @@ namespace DecalSystem
 				set { obj.decalMaterial = value; }
 			}
 
-			public override void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh,
-				ref Renderer renderer, ref int submesh, ref Material material,
-				ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix)
+			public override void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
 			{
-				base.GetDrawCommand(renderPath, ref mesh, ref renderer, ref submesh, ref material, ref propertyBlock, ref matrix);
+				base.GetDrawCommand(renderPath, ref mesh, ref renderer, ref submesh, ref material, ref propertyBlock, ref matrix, buffers);
 				mesh = DecalScreenSpaceObject.CubeMesh;
 			}
 
@@ -91,11 +90,8 @@ namespace DecalSystem
 			}
 		}
 
-		public override void Refresh(RefreshAction action)
+		public override void ClearData()
 		{
-			base.Refresh(action);
-			if ((action & RefreshAction.EnableDisable) != 0)
-				NotifyDataChanged();
 		}
 
 		public override IDecalDraw[] GetDecalDraws()

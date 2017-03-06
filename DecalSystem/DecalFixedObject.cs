@@ -56,6 +56,8 @@ namespace DecalSystem
 
 		protected class FixedDraw : IDecalDraw
 		{
+			public virtual bool Enabled => true;
+
 			public const int MaxInstances = 8;
 			public int Submesh { get; set; }
 			public DecalMaterial DecalMaterial { get; set; }
@@ -67,9 +69,7 @@ namespace DecalSystem
 			private Material mat;
 			private readonly List<Matrix4x4> matrixList = new List<Matrix4x4>();
 
-			public void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh,
-				ref Renderer renderer, ref int submesh, ref Material material,
-				ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix)
+			public void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
 			{
 				mesh = DecalObject.Mesh;
 				submesh = Submesh;
@@ -114,6 +114,7 @@ namespace DecalSystem
 			{
 				o.obj = this;
 				FixedDraw group = null;
+				// ReSharper disable once LoopCanBeConvertedToQuery
 				foreach (var g in drawGroups)
 				{
 					if (g.Submesh != o.submesh ||

@@ -42,8 +42,8 @@ namespace DecalSystem
 		}
 
 		private SkinnedMeshRenderer skinnedRenderer;
-		private int[][] triangleCache;
-		private Vector2[] uvBuffer;
+		[NonSerialized] private int[][] triangleCache;
+		[NonSerialized] private Vector2[] uvBuffer;
 
 		public override Renderer Renderer => SkinnedRenderer;
 
@@ -57,12 +57,17 @@ namespace DecalSystem
 		private Mesh mergedMesh;
 
 		[SerializeField]
+		protected List<SkinnedInstance> instances = new List<SkinnedInstance>();
+
+		protected readonly List<SkinnedChannel> channels = new List<SkinnedChannel>();
+
+		[Serializable]
 		protected class SkinnedInstance : DecalInstance
 		{
 			[NonSerialized] public DecalSkinnedObject obj;
 
 			public int uvDataStart;
-			public Vector2[] uvData;
+			[HideInInspector] public Vector2[] uvData;
 			public SkinnedChannel channel;
 
 			public override DecalObject DecalObject => obj;
@@ -91,11 +96,12 @@ namespace DecalSystem
 				}
 			}
 
-			public SkinnedInstance(DecalSkinnedObject obj, DecalMaterial decalMaterial, Vector2[] uvData)
+			public SkinnedInstance(DecalSkinnedObject obj, DecalMaterial decalMaterial, Vector2[] uvData, int uvDataStart)
 			{
 				this.obj = obj;
 				this.decalMaterial = decalMaterial;
 				this.uvData = uvData;
+				this.uvDataStart = uvDataStart;
 			}
 		}
 
@@ -183,28 +189,30 @@ namespace DecalSystem
 			private ComputeBuffer buffer;
 			private readonly MaterialPropertyBlock block = new MaterialPropertyBlock();
 
+			public bool Enabled => true;
+
 			public override void Update()
 			{
 				if (buffer == null)
 					buffer = new ComputeBuffer(uvData.Length, sizeof(float) * 2);
-				block.SetBuffer(ShaderKeywords.Buffer, buffer);
+				//block.SetBuffer(ShaderKeywords.Buffer, buffer);
 				buffer.SetData(uvData);
 			}
 
-			public virtual void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh,
-				ref Renderer renderer, ref int submesh, ref Material material,
-				ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix)
+			public virtual void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
 			{
 				propertyBlock = block;
 				if (renderPath == RenderingPath.DeferredShading)
 				{
 					renderer = obj.SkinnedRenderer;
 					material = DecalMaterial?.GetMaterial(SkinnedBuffer);
+					buffers.Add(new KeyValuePair<string, ComputeBuffer>(ShaderKeywords.Buffer, buffer));
 				}
 				else
 				{
 					mesh = obj.GetCurrentMesh();
 					material = DecalMaterial?.GetMaterial(SkinnedBuffer);
+					block.SetBuffer(ShaderKeywords.Buffer, buffer);
 				}
 			}
 
@@ -301,14 +309,13 @@ namespace DecalSystem
 			}
 		}
 
-		protected readonly List<SkinnedChannel> channels = new List<SkinnedChannel>();
-
 		protected virtual SkinnedChannel CreateChannel(DecalMaterial material)
 		{
 			if (material.IsModeSupported(SkinnedBuffer))
 			{
 				var ret = new SkinnedBufferChannel(this);
 				channels.Add(ret);
+				ClearData();
 				return ret;
 			}
 			else if(material.IsModeSupported(SkinnedUv))
@@ -352,7 +359,11 @@ namespace DecalSystem
 				dr.localBounds = SkinnedRenderer.localBounds;
 				dr.quality = SkinnedRenderer.quality;
 				dr.updateWhenOffscreen = SkinnedRenderer.updateWhenOffscreen;
-				return SkinnedMeshChannel.TryCreate(this, dr, UvChannel.Uv1A);
+				var newC = SkinnedMeshChannel.TryCreate(this, dr, UvChannel.Uv1A);
+				if(newC == null) throw new Exception("TryCreate is null for a new renderer");
+				channels.Add(newC);
+				ClearData();
+				return newC;
 			}
 			throw new Exception("No skinned modes supported for " + material);
 		}
@@ -362,7 +373,7 @@ namespace DecalSystem
 			foreach (var o in instances)
 				o.channel = null;
 			foreach (var r in SkinnedMeshChannel.GetDecalRenderers())
-				Destroy(r.gameObject);
+				DestroyImmediate(r.gameObject);
 			foreach (var c in channels)
 				c.Dispose();
 			channels.Clear();
@@ -390,8 +401,6 @@ namespace DecalSystem
 			}
 		}
 
-		protected List<SkinnedInstance> instances = new List<SkinnedInstance>();
-
 		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
 		{
 			base.AddDecal(projector, decal, submesh);
@@ -418,8 +427,9 @@ namespace DecalSystem
 				newUvBuffer[i - start] = uvBuffer[i];
 
 			
-			var inst = new SkinnedInstance(this, decal, newUvBuffer);
+			var inst = new SkinnedInstance(this, decal, newUvBuffer, start);
 			AddInstance(inst);
+			instances.Add(inst);
 			Profiler.EndSample();
 			Profiler.EndSample();
 			return inst;
@@ -441,8 +451,9 @@ namespace DecalSystem
 			return ret;
 		}
 
-		protected virtual void OnDestroy()
+		protected override void OnDisable()
 		{
+			base.OnDisable();
 			ClearChannels();
 		}
 

@@ -11,7 +11,7 @@ MonoBehaviour:
   m_Script: {fileID: 2032810949, guid: 985b4d1823d2b41469085ab826add42f, type: 3}
   m_Name: TestDecal
   m_EditorClassIdentifier: 
-  defaultMaterial: {fileID: 0}
+  defaultMaterial: {fileID: 2100000, guid: cf62f3e5577c78049b3c7a23d0acdfbf, type: 2}
   color: {r: 1, g: 1, b: 1, a: 1}
   emission: {r: 0, g: 0, b: 0, a: 1}
   smoothness: 0.74

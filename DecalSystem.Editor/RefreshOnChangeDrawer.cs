@@ -14,7 +14,7 @@ namespace DecalSystem.Editor
 			if (EditorGUI.PropertyField(position, property, label))
 			{
 				var dobj = property.serializedObject.targetObjects.OfType<DecalObject>().ToList();
-				DecalObject.RefreshAll(((RefreshOnChangeAttribute)attribute).RefreshAction, o => dobj.Contains(o));
+				DecalObject.RefreshAll(o => dobj.Contains(o));
 			}
 		}
 	}

@@ -49,10 +49,6 @@ namespace DecalSystem
 
 		static DecalManager()
 		{
-			// Clear data when an object is enabled or disabled
-			DecalObject.ObjectChangeState += (o, b) => Current?.ClearData();
-			// Clear data when a decal is added
-			DecalObject.DataChanged += o => Current?.ClearData();
 		}
 
 		/// <summary>
@@ -93,11 +89,13 @@ namespace DecalSystem
 				var cd = pair.Value;
 				if (cd.command != null)
 				{
-					pair.Key.RemoveCommandBuffer(cd.cameraEvent, cd.command);
+					if(pair.Key != null)
+						pair.Key.RemoveCommandBuffer(cd.cameraEvent, cd.command);
 					cd.command.Dispose();
 				}
 				// TODO: Figure out when we change this
-				pair.Key.depthTextureMode = DepthTextureMode.None;
+				if (pair.Key != null)
+					pair.Key.depthTextureMode = DepthTextureMode.None;
 			}
 			cameraData.Clear();
 			cameraArray = null;
@@ -251,7 +249,6 @@ namespace DecalSystem
 			{
 				prevCameraArray = (Camera[])cameraArray.Clone();
 				ResetRenderingPaths();
-				DecalObject.RefreshAll(RefreshAction.CamerasChanged);
 				return true;
 			}
 			foreach(var cam in cameraArray)
@@ -267,7 +264,6 @@ namespace DecalSystem
 				{
 					cameraArray.CopyTo(prevCameraArray, 0);
 					ResetRenderingPaths();
-					DecalObject.RefreshAll(RefreshAction.CamerasChanged);
 					return true;
 				}
 			}
@@ -314,6 +310,8 @@ namespace DecalSystem
 			return !(rp == RenderingPath.DeferredShading && dmat.RequiresDepthTexture(mat));
 		}
 		
+		private readonly List<KeyValuePair<string, ComputeBuffer>> setBuffers = new List<KeyValuePair<string, ComputeBuffer>>(); 
+
 		public void DrawDecals(Camera cam)
 		{
 			CameraData cd;
@@ -336,6 +334,7 @@ namespace DecalSystem
 				{
 					try
 					{
+						if (draw?.Enabled != true) continue;
 						Mesh mesh = null;
 						Renderer rend = null;
 						int submesh = 0;
@@ -343,23 +342,26 @@ namespace DecalSystem
 						MaterialPropertyBlock block = null;
 						var matrix = Matrix4x4.identity;
 
-						draw.GetDrawCommand(rp, ref mesh, ref rend, ref submesh, ref material, ref block, ref matrix);
+						setBuffers.Clear();
+						draw.GetDrawCommand(rp, ref mesh, ref rend, ref submesh, ref material, ref block, ref matrix, setBuffers);
 						if (material == null || (rend == null && mesh == null)) continue;
 
 						material = draw.DecalMaterial?.ModifyMaterial(material, rp) ?? material;
 						var useCommandBuffer = rend != null;
 						useCommandBuffer |= mesh != null && !CanUseDrawMesh(rp, draw.DecalMaterial, material);
 						requireDepth |= draw.DecalMaterial.RequiresDepthTexture(material);
-
+						
 						if (useCommandBuffer)
 						{
 							// Culling
-							if (obj.UseManualCulling && toRender.Contains(new KeyValuePair<DecalObject, Camera>(obj, cam)))
+							if (obj.UseManualCulling && !toRender.Remove(new KeyValuePair<DecalObject, Camera>(obj, cam)))
 								continue;
 							var cmd = GetCommandBuffer(cam, cd);
 							var passes = draw.DecalMaterial?.GetKnownPasses(rp);
 							if (passes == null)
 								throw new Exception($"Unable to determine pass order for decal with {draw}");
+							foreach(var pair in setBuffers)
+								cmd.SetGlobalBuffer(pair.Key, pair.Value);
 							if (rend != null)
 							{
 								foreach (var pass in passes)
@@ -385,7 +387,6 @@ namespace DecalSystem
 			}
 
 			cam.depthTextureMode = requireDepth ? DepthTextureMode.Depth : DepthTextureMode.None;
-			toRender.Clear();
 		}
 
 		public void Repaint()

@@ -80,15 +80,10 @@ namespace DecalSystem
 
 	public interface IDecalDraw
 	{
+		bool Enabled { get; }
 		DecalObject DecalObject { get; }
 		DecalMaterial DecalMaterial { get; }
-		void GetDrawCommand(RenderingPath renderPath,
-			ref Mesh mesh,
-			ref Renderer renderer,
-			ref int submesh,
-			ref Material material,
-			ref MaterialPropertyBlock propertyBlock,
-			ref Matrix4x4 matrix);
+		void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers);
 	}
 
 	/// <summary>
@@ -145,14 +140,8 @@ namespace DecalSystem
 		public virtual bool Enabled
 		{
 			get { return enabled; }
-			set { enabled = value; DecalObject.Refresh(RefreshAction.EnableDisable); }
+			set { enabled = value; DecalObject.ClearData(); }
 		}
-
-		/// <summary>
-		/// Whether this <c>DecalInstance</c> controls a single decal,
-		/// or a full 'channel'
-		/// </summary>
-		public virtual bool HasMultipleDecals => false;
 
 		/// <summary>
 		/// The parent <c>DecalObject</c>
@@ -165,7 +154,7 @@ namespace DecalSystem
 		public virtual DecalMaterial DecalMaterial
 		{
 			get { return decalMaterial; }
-			set { decalMaterial = value; DecalObject.Refresh(RefreshAction.ChangeInstanceMaterial); }
+			set { decalMaterial = value; }
 		}
 	}
 
@@ -192,9 +181,7 @@ namespace DecalSystem
 			return m;
 		}
 
-		public virtual void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh,
-			ref Renderer renderer, ref int submesh, ref Material material,
-			ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix)
+		public virtual void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
 		{
 			matrix = DefaultMatrix();
 			material = DecalMaterial?.GetMaterial(ModeString);
@@ -261,16 +248,6 @@ namespace DecalSystem
 				GetActiveObjects();
 				return activeObjectsReadonly;
 			}
-		} 
-
-		/// <summary>
-		/// Called when an object's <c>RenderPathData</c> changed
-		/// </summary>
-		public static event Action<DecalObject> DataChanged;
-
-		protected void NotifyDataChanged()
-		{
-			DataChanged?.Invoke(this);
 		}
 
 		/// <summary>
@@ -323,7 +300,6 @@ namespace DecalSystem
 		/// <summary>
 		/// Gets the collection of draw commands for the given rendering path
 		/// </summary>
-		/// <param name="path"></param>
 		/// <returns>The rendering data, cached at this level, or <c>null</c></returns>
 		public abstract IDecalDraw[] GetDecalDraws();
 
@@ -346,18 +322,6 @@ namespace DecalSystem
 		public abstract bool UseManualCulling { get; }
 
 		/// <summary>
-		/// Refreshes the object
-		/// </summary>
-		/// <param name="action">The action that triggered the refresh</param>
-		/// <remarks>
-		/// This function will only recalculate data necessary for the given
-		/// triggering actions.
-		/// </remarks>
-		public virtual void Refresh(RefreshAction action)
-		{
-		}
-
-		/// <summary>
 		/// Creates a new renderer to draw additional decals, setting it up as
 		/// necessary.
 		/// </summary>
@@ -372,18 +336,19 @@ namespace DecalSystem
 		/// <summary>
 		/// Refreshes all active objects
 		/// </summary>
-		/// <param name="action">The triggering action</param>
 		/// <param name="predicate">Filters the objects to refresh. Disable with <c>null</c></param>
-		public static void RefreshAll(RefreshAction action, Predicate<DecalObject> predicate = null)
+		public static void RefreshAll(Predicate<DecalObject> predicate = null)
 		{
 			GetActiveObjects();
 			for (int i = 0, count = activeObjects.Count; i < count; i++)
 			{
 				var obj = activeObjects[i];
 				if(predicate == null || predicate(obj))
-					obj.Refresh(action);
+					obj.ClearData();
 			}
 		}
+
+		public abstract void ClearData();
 
 		/// <summary>
 		/// Called when an object becomes enabled/disabled
@@ -430,19 +395,10 @@ namespace DecalSystem
 		/// Whether to require <c>DecalManager.RenderObject</c> to be called for this object
 		/// </summary>
 		public override bool UseManualCulling => false;
-		
-		public override void Refresh(RefreshAction action)
-		{
-			base.Refresh(action);
-			if((action & RefreshAction.EnableDisable) != 0)
-				NotifyDataChanged();
-		}
 
-		public virtual void ClearData(bool notify = true)
+		public override void ClearData()
 		{
 			drawArray = null;
-			if(notify)
-				NotifyDataChanged();
 		}
 
 		private IDecalDraw[] drawArray;
@@ -456,7 +412,6 @@ namespace DecalSystem
 		{
 			return Enumerable.Range(0, Count)
 				.Select(GetDecal)
-				.Where(d => d.Enabled)
 				.OfType<IDecalDraw>();
 		}
 
@@ -475,13 +430,13 @@ namespace DecalSystem
 		protected override void OnEnable()
 		{
 			base.OnEnable();
-			ClearData(false);
+			ClearData();
 		}
 
 		protected override void OnDisable()
 		{
 			base.OnDisable();
-			ClearData(false);
+			ClearData();
 		}
 	}
 }
