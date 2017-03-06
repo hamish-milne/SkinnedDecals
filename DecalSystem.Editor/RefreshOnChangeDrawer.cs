@@ -49,9 +49,9 @@ namespace DecalSystem.Editor
 			return ret;
 		}
 
-		private static readonly KeyValuePair<string, FieldInfo>[] matrixFields =
+		private static readonly Pair<string, FieldInfo>[] matrixFields =
 			typeof(Matrix4x4).GetFields()
-			.Select(f => new KeyValuePair<string, FieldInfo>(f.Name.Replace('m', 'e'), f))
+			.Select(f => new Pair<string, FieldInfo>(f.Name.Replace('m', 'e'), f))
 			.ToArray();
 		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
 		{
@@ -59,7 +59,7 @@ namespace DecalSystem.Editor
 			if (!(property.isExpanded = EditorGUI.Foldout(TakeLine(position, ref y), property.isExpanded, label))) return;
 			var m = (object)default(Matrix4x4);
 			foreach(var pair in matrixFields)
-				pair.Value.SetValue(m, property.FindPropertyRelative(pair.Key).floatValue);
+				pair.Second.SetValue(m, property.FindPropertyRelative(pair.First).floatValue);
 			Vector3 mPos, mScale;
 			Quaternion mRotation;
 			Decompose((Matrix4x4)m, out mPos, out mRotation, out mScale);
@@ -73,7 +73,7 @@ namespace DecalSystem.Editor
 			{
 				m = Matrix4x4.TRS(mPos, mRotation, mScale);
 				foreach (var pair in matrixFields)
-					property.FindPropertyRelative(pair.Key).floatValue = (float) pair.Value.GetValue(m);
+					property.FindPropertyRelative(pair.First).floatValue = (float) pair.Second.GetValue(m);
 			}
 		}
 	}

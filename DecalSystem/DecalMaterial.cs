@@ -186,11 +186,26 @@ namespace DecalSystem
 				prop.materialAction(this, material);
 		}
 
-		struct MaterialCacheKey
+		struct MaterialCacheKey : IEquatable<MaterialCacheKey>
 		{
 			public string modeKeyword;
 			public string propertyName;
 			public int value;
+
+			// Explicitly define comparison methods to make dictionary usage faster
+			public bool Equals(MaterialCacheKey other)
+			{
+				return other.modeKeyword == modeKeyword
+				       && other.propertyName == propertyName
+				       && other.value == value;
+			}
+
+			public override int GetHashCode()
+			{
+				// ReSharper disable NonReadonlyMemberInGetHashCode
+				return (modeKeyword?.GetHashCode() ?? 0)*23 ^ (propertyName?.GetHashCode() ?? 0)*17 ^ value;
+				// ReSharper restore NonReadonlyMemberInGetHashCode
+			}
 		}
 
 		private readonly Dictionary<MaterialCacheKey, Material> materialCache

@@ -104,8 +104,8 @@ namespace DecalSystem
 		}
 
 		// Holds whether a manually culled object is rendered for each camera
-		private readonly HashSet<KeyValuePair<DecalObject, Camera>> toRender
-			= new HashSet<KeyValuePair<DecalObject, Camera>>();   
+		private readonly HashSet<Pair<DecalObject, Camera>> toRender
+			= new HashSet<Pair<DecalObject, Camera>>();   
 
 		/// <summary>
 		/// Notify the manager that the given object is visible to the given camera
@@ -121,7 +121,7 @@ namespace DecalSystem
 				throw new ArgumentNullException(nameof(obj));
 			if(renderCamera == null)
 				throw new ArgumentNullException(nameof(renderCamera));
-			toRender.Add(new KeyValuePair<DecalObject, Camera>(obj, renderCamera));
+			toRender.Add(new Pair<DecalObject, Camera>(obj, renderCamera));
 		}
 
 		/// <summary>
@@ -354,7 +354,7 @@ namespace DecalSystem
 						if (useCommandBuffer)
 						{
 							// Culling
-							if (obj.UseManualCulling && !toRender.Remove(new KeyValuePair<DecalObject, Camera>(obj, cam)))
+							if (obj.UseManualCulling && !toRender.Remove(new Pair<DecalObject, Camera>(obj, cam)))
 								continue;
 							var cmd = GetCommandBuffer(cam, cd);
 							var passes = draw.DecalMaterial?.GetKnownPasses(rp);

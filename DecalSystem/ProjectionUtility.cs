@@ -6,6 +6,53 @@ using UnityEngine.Profiling;
 
 namespace DecalSystem
 {
+	// ReSharper disable once InconsistentNaming
+	public struct Pair<T, U> : IEquatable<Pair<T, U>>
+	{
+		public T First { get; }
+		public U Second { get; }
+
+		public Pair(T first, U second)
+		{
+			First = first;
+			Second = second;
+		}
+
+		public override int GetHashCode()
+		{
+			return (First?.GetHashCode() ?? 0) * 17 ^ (Second?.GetHashCode() ?? 0) * 23;
+		}
+
+		public bool Equals(Pair<T, U> other)
+		{
+			return other.First.Equals(First) && other.Second.Equals(Second);
+		}
+	}
+
+	// ReSharper disable once InconsistentNaming
+	public struct EqPair<T, U> : IEquatable<EqPair<T, U>> where T : IEquatable<T> where U : IEquatable<U>
+	{
+		public T First { get; }
+		public U Second { get; }
+
+		public EqPair(T first, U second)
+		{
+			First = first;
+			Second = second;
+		}
+
+		public override int GetHashCode()
+		{
+			return (First?.GetHashCode() ?? 0) * 17 ^ (Second?.GetHashCode() ?? 0) * 23;
+		}
+
+		public bool Equals(EqPair<T, U> other)
+		{
+			return other.First.Equals(First) && other.Second.Equals(Second);
+		}
+	}
+
+
 	public static class ProjectionUtility
 	{
 		private static readonly Vector3[] planeMask =

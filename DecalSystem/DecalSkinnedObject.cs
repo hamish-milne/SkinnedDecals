@@ -295,17 +295,17 @@ namespace DecalSystem
 					decalRenderer.sharedMaterials = mats.Where(m => m != null).Concat(new[] {material}).ToArray();
 			}
 
-			private static readonly HashSet<KeyValuePair<SkinnedMeshRenderer, UvChannel>> usedChannels
-				= new HashSet<KeyValuePair<SkinnedMeshRenderer, UvChannel>>();
+			private static readonly HashSet<Pair<SkinnedMeshRenderer, UvChannel>> usedChannels
+				= new HashSet<Pair<SkinnedMeshRenderer, UvChannel>>();
 
-			public static SkinnedMeshRenderer[] GetDecalRenderers() => usedChannels.Select(p => p.Key).ToArray();
+			public static SkinnedMeshRenderer[] GetDecalRenderers() => usedChannels.Select(p => p.First).ToArray();
 
 			public static SkinnedMeshChannel TryCreate(DecalSkinnedObject obj, SkinnedMeshRenderer decalRenderer,
 				UvChannel uvChannel)
 			{
 				if(obj == null) throw new ArgumentNullException(nameof(obj));
 				if(decalRenderer == null) throw new ArgumentNullException(nameof(decalRenderer));
-				if(usedChannels.Add(new KeyValuePair<SkinnedMeshRenderer, UvChannel>(decalRenderer, uvChannel)))
+				if(usedChannels.Add(new Pair<SkinnedMeshRenderer, UvChannel>(decalRenderer, uvChannel)))
 					return new SkinnedMeshChannel(obj, decalRenderer, decalRenderer.sharedMesh, uvChannel);
 				return null;
 			}
@@ -314,7 +314,7 @@ namespace DecalSystem
 			{
 				if (decalRenderer != null)
 					decalRenderer.sharedMaterials = decalRenderer.sharedMaterials.Where(m => m != material).ToArray();
-				usedChannels.Remove(new KeyValuePair<SkinnedMeshRenderer, UvChannel>(decalRenderer, uvChannel));
+				usedChannels.Remove(new Pair<SkinnedMeshRenderer, UvChannel>(decalRenderer, uvChannel));
 				decalRenderer = null;
 			}
 
