@@ -362,7 +362,5 @@ namespace DecalSystem
 		}
 
 		public abstract bool RequiresDepthTexture(Material mat);
-
-		public virtual bool CanDrawRenderers(RenderingPath path) => GetKnownPasses(path) != null;
 	}
 }

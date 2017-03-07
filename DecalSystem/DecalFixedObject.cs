@@ -81,7 +81,7 @@ namespace DecalSystem
 			private Material mat;
 			private readonly List<Matrix4x4> matrixList = new List<Matrix4x4>();
 
-			public void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
+			public void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
 			{
 				mesh = DecalObject.Mesh;
 				submesh = Submesh;

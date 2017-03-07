@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace DecalSystem
 {
@@ -38,6 +39,20 @@ namespace DecalSystem
 				ret[key] = valueSelector(e);
 			}
 			return ret;
+		}
+
+		private static readonly Func<UnityEngine.Object, bool> isNativeObjectAlive =
+			(Func < UnityEngine.Object, bool>)
+			Delegate.CreateDelegate(typeof(Func<UnityEngine.Object, bool>),
+				typeof(UnityEngine.Object)
+					.GetMethod("IsNativeObjectAlive", BindingFlags.NonPublic | BindingFlags.Static), true);
+			
+
+		public static bool Exists(this UnityEngine.Object obj)
+		{
+			// ReSharper disable once RedundantCast.0
+			if ((object) obj == null) return false;
+			return isNativeObjectAlive(obj);
 		}
 	}
 }

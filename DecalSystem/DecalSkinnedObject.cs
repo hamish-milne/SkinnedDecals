@@ -38,8 +38,6 @@ namespace DecalSystem
 		public SkinnedMeshRenderer SkinnedRenderer =>
 			skinnedRenderer != null ? skinnedRenderer : (skinnedRenderer = GetComponent<SkinnedMeshRenderer>());
 
-		public override bool UseManualCulling => true;
-
 		public override bool ScreenSpace => false;
 
 		private Mesh mergedMesh;
@@ -211,12 +209,10 @@ namespace DecalSystem
 				buffer.SetData(uvData);
 			}
 
-			public virtual void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh,
-				ref Renderer renderer, ref int submesh, ref Material material,
-				ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
+			public virtual void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
 			{
 				if (DecalMaterial == null) return;
-				if (DecalMaterial.CanDrawRenderers(renderPath))
+				if (dcam.CanDrawRenderers(DecalMaterial))
 				{
 					renderer = obj.SkinnedRenderer;
 					material = DecalMaterial.GetMaterial(SkinnedBuffer);
@@ -498,11 +494,6 @@ namespace DecalSystem
 		protected virtual void LateUpdate()
 		{
 			bakeRequired = true;
-		}
-
-		protected virtual void OnWillRenderObject()
-		{
-			DecalManager.Current?.RenderObject(this, Camera.current);
 		}
 
 		public override IDecalDraw[] GetDecalDraws()

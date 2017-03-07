@@ -14,7 +14,6 @@ namespace DecalSystem
 		public override Bounds? Bounds => null;
 		public override Material[] Materials => null;
 		public override string[] RequiredModes { get; } = {ShaderKeywords.ScreenSpace};
-		public override bool UseManualCulling => false;
 
 		public virtual DecalMaterial DecalMaterial
 		{
@@ -70,9 +69,9 @@ namespace DecalSystem
 				set { obj.decalMaterial = value; }
 			}
 
-			public override void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
+			public override void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
 			{
-				base.GetDrawCommand(renderPath, ref mesh, ref renderer, ref submesh, ref material, ref propertyBlock, ref matrix, buffers);
+				base.GetDrawCommand(dcam, ref mesh, ref renderer, ref submesh, ref material, ref propertyBlock, ref matrix, buffers);
 				mesh = DecalScreenSpaceObject.CubeMesh;
 			}
 

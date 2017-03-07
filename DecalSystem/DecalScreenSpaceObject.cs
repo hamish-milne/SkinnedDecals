@@ -24,9 +24,9 @@ namespace DecalSystem
 
 			public override string ModeString => ShaderKeywords.ScreenSpace;
 
-			public override void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
+			public override void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
 			{
-				base.GetDrawCommand(renderPath, ref mesh, ref renderer, ref submesh,
+				base.GetDrawCommand(dcam, ref mesh, ref renderer, ref submesh,
 					ref material, ref propertyBlock, ref matrix, buffers);
 				mesh = CubeMesh;
 			}

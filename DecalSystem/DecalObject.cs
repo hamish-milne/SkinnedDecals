@@ -83,7 +83,7 @@ namespace DecalSystem
 		bool Enabled { get; }
 		DecalObject DecalObject { get; }
 		DecalMaterial DecalMaterial { get; }
-		void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers);
+		void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers);
 	}
 
 	/// <summary>
@@ -181,7 +181,7 @@ namespace DecalSystem
 			return m;
 		}
 
-		public virtual void GetDrawCommand(RenderingPath renderPath, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
+		public virtual void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
 		{
 			matrix = DefaultMatrix();
 			material = DecalMaterial?.GetMaterial(ModeString);
@@ -313,15 +313,6 @@ namespace DecalSystem
 		public abstract DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh);
 
 		/// <summary>
-		/// Whether to cull the object in code.
-		/// </summary>
-		/// <remarks>
-		/// If this is <c>true</c>, the object won't be rendered unless <c>DecalManager.RenderObject</c>
-		/// is called for each required camera.
-		/// </remarks>
-		public abstract bool UseManualCulling { get; }
-
-		/// <summary>
 		/// Creates a new renderer to draw additional decals, setting it up as
 		/// necessary.
 		/// </summary>
@@ -393,10 +384,6 @@ namespace DecalSystem
 	/// </remarks>
 	public abstract class DecalObjectBase : DecalObject
 	{
-		/// <summary>
-		/// Whether to require <c>DecalManager.RenderObject</c> to be called for this object
-		/// </summary>
-		public override bool UseManualCulling => false;
 
 		public override void ClearData()
 		{
@@ -442,6 +429,13 @@ namespace DecalSystem
 		{
 			base.OnDisable();
 			ClearData();
+		}
+
+		protected virtual void OnWillRenderObject()
+		{
+			var dcam = Camera.current.GetComponent<DecalCamera>();
+			if (dcam != null)
+				dcam.RenderObject(this);
 		}
 	}
 }

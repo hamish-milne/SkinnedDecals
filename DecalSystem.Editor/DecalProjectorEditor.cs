@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -19,8 +18,7 @@ namespace DecalSystem.Editor
 			if (GUILayout.Button("Project", GUILayout.Width(120f), GUILayout.Height(30f)))
 			{
 				projector.Project();
-				if(DecalManager.Current != null)
-					DecalManager.Current.Repaint();
+				ModifySceneToForceUpdate();
 				Resources.FindObjectsOfTypeAll<SceneView>().FirstOrDefault()?.Repaint();
 			}
 			GUILayout.FlexibleSpace();
@@ -29,6 +27,7 @@ namespace DecalSystem.Editor
 				Renderer[] renderers;
 				projector.ProjectBaked(out renderers);
 				// Create assets for default materials if needed
+				// TODO: Put these in a specific folder: IronDecal Assets?
 				var assetDir = AssetDatabase.GetAssetPath(projector.DecalMaterial);
 				assetDir = string.IsNullOrEmpty(assetDir) ?
 					"Assets" : Path.GetDirectoryName(assetDir);
@@ -61,21 +60,27 @@ namespace DecalSystem.Editor
 		[InitializeOnLoadMethod]
 		protected static void RepaintOnRecompile()
 		{
-			EditorApplication.update += ModifySceneToForceUpdate;
+			frameCount = 0;
+			EditorApplication.update += ModifySceneMethod;
 		}
 
-		private static int frameCount = 0;
+		private static int frameCount;
 
-		private static void ModifySceneToForceUpdate()
+		private static void ModifySceneMethod()
 		{
 			if (frameCount >= 1)
 			{
-				var go = new GameObject();
-				DestroyImmediate(go);
+				ModifySceneToForceUpdate();
 				// ReSharper disable once DelegateSubtraction
-				EditorApplication.update -= ModifySceneToForceUpdate;
+				EditorApplication.update -= ModifySceneMethod;
 			}
 			frameCount++;
+		}
+
+		public static void ModifySceneToForceUpdate()
+		{
+			var go = new GameObject();
+			DestroyImmediate(go);
 		}
 
 		[MenuItem("GameObject/Add Decal Object", false, 0)]
