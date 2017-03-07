@@ -14,7 +14,7 @@ MonoBehaviour:
   defaultMaterial: {fileID: 2100000, guid: cf62f3e5577c78049b3c7a23d0acdfbf, type: 2}
   color: {r: 1, g: 1, b: 1, a: 1}
   emission: {r: 0, g: 0, b: 0, a: 1}
-  smoothness: 0.74
+  smoothness: 0.662
   metallic: 1
   parallax: 0.08
   albedo: {fileID: 2800000, guid: 7c5c3313ecb5b8142a446c2304d0dc2b, type: 3}

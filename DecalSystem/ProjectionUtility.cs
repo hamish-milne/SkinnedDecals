@@ -30,12 +30,12 @@ namespace DecalSystem
 	}
 
 	// ReSharper disable once InconsistentNaming
-	public struct EqPair<T, U> : IEquatable<EqPair<T, U>> where T : IEquatable<T> where U : IEquatable<U>
+	public struct ObjPair<T, U> : IEquatable<ObjPair<T, U>> where T : UnityEngine.Object where U : IEquatable<U>
 	{
 		public T First { get; }
 		public U Second { get; }
 
-		public EqPair(T first, U second)
+		public ObjPair(T first, U second)
 		{
 			First = first;
 			Second = second;
@@ -46,7 +46,7 @@ namespace DecalSystem
 			return (First?.GetHashCode() ?? 0) * 17 ^ (Second?.GetHashCode() ?? 0) * 23;
 		}
 
-		public bool Equals(EqPair<T, U> other)
+		public bool Equals(ObjPair<T, U> other)
 		{
 			return other.First.Equals(First) && other.Second.Equals(Second);
 		}

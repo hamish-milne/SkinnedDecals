@@ -13,32 +13,9 @@ namespace DecalSystem
 	public class DecalManager : MonoBehaviour
 	{
 		/// <summary>
-		/// Stores data to render for a given camera
-		/// </summary>
-		[Serializable]
-		protected class CameraData
-		{
-			public CameraEvent cameraEvent;
-
-			/// <summary>
-			/// The command buffer to bind, if any
-			/// </summary>
-			public CommandBuffer command;
-		}
-
-		/// <summary>
 		/// Whether to draw decals on the scene camera
 		/// </summary>
 		[SerializeField] protected bool renderSceneCamera = true;
-
-		private readonly Dictionary<Camera, CameraData> cameraData = new Dictionary<Camera, CameraData>();
-
-		protected class RenderPathData
-		{
-			public readonly List<MeshData> meshList = new List<MeshData>();
-
-			public bool requireDepthTexture;
-		}
 
 		/// <summary>
 		/// The currently enabled manager instance
@@ -46,10 +23,6 @@ namespace DecalSystem
 		public static DecalManager Current { get; private set; }
 
 		private static Camera sceneCamera;
-
-		static DecalManager()
-		{
-		}
 
 		/// <summary>
 		/// The scene camera, if any
@@ -84,23 +57,7 @@ namespace DecalSystem
 		{
 			if (Current == this)
 				Current = null;
-			foreach (var pair in cameraData)
-			{
-				var cd = pair.Value;
-				if (cd.command != null)
-				{
-					if(pair.Key != null)
-						pair.Key.RemoveCommandBuffer(cd.cameraEvent, cd.command);
-					cd.command.Dispose();
-				}
-				// TODO: Figure out when we change this
-				if (pair.Key != null)
-					pair.Key.depthTextureMode = DepthTextureMode.None;
-			}
-			cameraData.Clear();
 			cameraArray = null;
-			prevCameraArray = null;
-			prevRenderingPaths.Clear();
 		}
 
 		// Holds whether a manually culled object is rendered for each camera
@@ -123,63 +80,8 @@ namespace DecalSystem
 				throw new ArgumentNullException(nameof(renderCamera));
 			toRender.Add(new Pair<DecalObject, Camera>(obj, renderCamera));
 		}
-
-		/// <summary>
-		/// Gets the command buffer event for the given rendering path
-		/// </summary>
-		/// <param name="path"></param>
-		/// <returns></returns>
-		protected virtual CameraEvent GetCameraEvent(RenderingPath path)
-		{
-			switch (path)
-			{
-				case RenderingPath.Forward:
-					return CameraEvent.AfterForwardOpaque;
-				case RenderingPath.DeferredShading:
-					return CameraEvent.BeforeReflections;
-					//CameraEvent.AfterGBuffer; // See below for why not
-				case RenderingPath.DeferredLighting:
-					return CameraEvent.AfterFinalPass;
-				case RenderingPath.VertexLit:
-					return CameraEvent.BeforeImageEffects;
-				default:
-					throw new ArgumentOutOfRangeException();
-			}
-		}
-
-		private static readonly RenderTargetIdentifier[] gBuffer = new[]
-		{
-			BuiltinRenderTextureType.GBuffer0,
-			BuiltinRenderTextureType.GBuffer1,
-			BuiltinRenderTextureType.GBuffer2,
-			BuiltinRenderTextureType.GBuffer3
-		}.Select(b => new RenderTargetIdentifier(b)).ToArray();
-		private static readonly RenderTargetIdentifier depth =
-			new RenderTargetIdentifier(BuiltinRenderTextureType.CurrentActive);
-
-		protected virtual void SetupCommandBuffer(CameraData cd, CommandBuffer cmd)
-		{
-			// To draw screen-space decals, we need a depth texture for *this* frame
-			// Just using AfterGBuffer, the depth is from the previous frame, which causes flickering
-			// BeforeReflections is after the G-buffer *and* after depth is resolved
-			// But, we need to set the render target back to the G-buffer to draw decals
-			if (cd.cameraEvent == CameraEvent.BeforeReflections)
-			{
-				cmd.SetRenderTarget(gBuffer, depth);
-			}
-		}
-
-		// Stores the previous camera setup, to detect changes
-		private readonly Dictionary<Camera, RenderingPath> prevRenderingPaths
-			= new Dictionary<Camera, RenderingPath>(); 
-		private Camera[] cameraArray, prevCameraArray;
-
-		private void ResetRenderingPaths()
-		{
-			prevRenderingPaths.Clear();
-			foreach (var c in prevCameraArray)
-				prevRenderingPaths[c] = c.actualRenderingPath;
-		}
+		
+		private Camera[] cameraArray;
 
 		public virtual bool CanDrawRenderers(DecalMaterial material)
 		{
@@ -213,67 +115,12 @@ namespace DecalSystem
 		/// Checks whether any cameras have changed, and refreshes objects accordingly
 		/// </summary>
 		/// <returns><c>true</c> if they have, otherwise <c>false</c></returns>
-		protected bool CheckCameras()
+		protected void AddCameraComponents()
 		{
 			GetAllCameras();
-			if (prevCameraArray == null || prevCameraArray.Length != cameraArray.Length)
-			{
-				prevCameraArray = (Camera[])cameraArray.Clone();
-				ResetRenderingPaths();
-				return true;
-			}
 			foreach(var cam in cameraArray)
 				if (cam.GetComponent<DecalCamera>() == null)
 					cam.gameObject.AddComponent<DecalCamera>();
-			for (int i = 0; i < cameraArray.Length; i++)
-			{
-				var prevPath = RenderingPath.UsePlayerSettings;
-				if (prevCameraArray[i] != null && !prevRenderingPaths.TryGetValue(prevCameraArray[i], out prevPath))
-					prevPath = RenderingPath.UsePlayerSettings;
-				if (cameraArray[i] != prevCameraArray[i] ||
-					 cameraArray[i].actualRenderingPath != prevPath)
-				{
-					cameraArray.CopyTo(prevCameraArray, 0);
-					ResetRenderingPaths();
-					return true;
-				}
-			}
-				
-			return (cameraData == null);
-		}
-
-		/// <summary>
-		/// Gets a cached command buffer for the given <c>CameraData</c>, binding it
-		/// according to its rendering path
-		/// </summary>
-		/// <param name="cd"></param>
-		/// <returns></returns>
-		protected CommandBuffer GetCommandBuffer(Camera cam, CameraData cd)
-		{
-			const string commandName = "Draw decals (DecalSystem)";
-			if (cd.command == null)
-			{
-				var evt = GetCameraEvent(cam.actualRenderingPath);
-				var cmds = cam.GetCommandBuffers(evt);
-				foreach(var cmd in cmds)
-					if (cmd.name == commandName)
-					{
-						cd.command = cmd;
-						cd.cameraEvent = evt;
-					}
-				if (cd.command == null)
-				{
-					cd.command = new CommandBuffer {name = commandName};
-					cd.cameraEvent = evt;
-					cam.AddCommandBuffer(evt, cd.command);
-					SetupCommandBuffer(cd, cd.command);
-				}
-				else
-				{
-					cd.command.Clear();
-				}
-			}
-			return cd.command;
 		}
 
 		protected virtual bool CanUseDrawMesh(RenderingPath rp, DecalMaterial dmat, Material mat)
@@ -283,17 +130,8 @@ namespace DecalSystem
 		
 		private readonly List<KeyValuePair<string, ComputeBuffer>> setBuffers = new List<KeyValuePair<string, ComputeBuffer>>(); 
 
-		public void DrawDecals(Camera cam)
+		public void DrawDecals(Camera cam, CommandBuffer cmdDepthTexture, CommandBuffer cmdDepthZtest)
 		{
-			CameraData cd;
-			if (!cameraData.TryGetValue(cam, out cd))
-				cameraData.Add(cam, cd = new CameraData());
-			if (cd.command != null)
-			{
-				cd.command.Clear();
-				SetupCommandBuffer(cd, cd.command);
-			}
-
 			var rp = cam.actualRenderingPath;
 			bool requireDepth = false;
 			var activeObjects = DecalObject.ActiveObjects;
@@ -320,14 +158,15 @@ namespace DecalSystem
 						material = draw.DecalMaterial?.ModifyMaterial(material, rp) ?? material;
 						var useCommandBuffer = rend != null;
 						useCommandBuffer |= mesh != null && !CanUseDrawMesh(rp, draw.DecalMaterial, material);
-						requireDepth |= draw.DecalMaterial.RequiresDepthTexture(material);
+						var thisRequiresDepth = draw.DecalMaterial.RequiresDepthTexture(material);
+						requireDepth |= thisRequiresDepth;
 						
 						if (useCommandBuffer)
 						{
 							// Culling
 							if (obj.UseManualCulling && !toRender.Remove(new Pair<DecalObject, Camera>(obj, cam)))
 								continue;
-							var cmd = GetCommandBuffer(cam, cd);
+							var cmd = thisRequiresDepth ? cmdDepthTexture : cmdDepthZtest;
 							var passes = draw.DecalMaterial?.GetKnownPasses(rp);
 							if (passes == null)
 								throw new Exception($"Unable to determine pass order for decal with {draw}");
@@ -362,7 +201,7 @@ namespace DecalSystem
 
 		public void Repaint()
 		{
-			CheckCameras();
+			AddCameraComponents();
 		}
 
 		protected virtual void Update()
@@ -374,9 +213,89 @@ namespace DecalSystem
 	[RequireComponent(typeof(Camera)), ExecuteInEditMode]
 	public class DecalCamera : MonoBehaviour
 	{
+		private CommandBuffer cmdDepthTexture, cmdDepthZtest;
+		private CameraEvent evtDepthTexture, evtDepthZtest;
+		private RenderingPath prevRenderingPath = RenderingPath.UsePlayerSettings;
+
+		protected virtual void GetCameraEvents(RenderingPath path, out CameraEvent depthTexture, out CameraEvent depthZtest)
+		{
+			bool hasDepthZtest = false;
+			depthZtest = default(CameraEvent);
+			switch (path)
+			{
+				case RenderingPath.Forward:
+					depthTexture = CameraEvent.AfterForwardOpaque;
+					break;
+				case RenderingPath.DeferredShading:
+					depthTexture = CameraEvent.BeforeReflections;
+					depthZtest = CameraEvent.AfterGBuffer;
+					hasDepthZtest = true;
+					break;
+				case RenderingPath.DeferredLighting:
+					depthTexture = CameraEvent.AfterFinalPass;
+					break;
+				case RenderingPath.VertexLit:
+					depthTexture = CameraEvent.BeforeImageEffects;
+					break;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+			if (!hasDepthZtest)
+				depthZtest = depthTexture;
+		}
+
+		private static readonly RenderTargetIdentifier[] gBuffer = new[]
+		{
+			BuiltinRenderTextureType.GBuffer0,
+			BuiltinRenderTextureType.GBuffer1,
+			BuiltinRenderTextureType.GBuffer2,
+			BuiltinRenderTextureType.GBuffer3
+		}.Select(b => new RenderTargetIdentifier(b)).ToArray();
+
+		// This unbinds the depth buffer, allowing it to be read as a texture
+		private static readonly RenderTargetIdentifier depth =
+			new RenderTargetIdentifier(BuiltinRenderTextureType.CurrentActive);
+
+		protected virtual void SetupCommandBuffer(CameraEvent evt, CommandBuffer cmd)
+		{
+			if (evt == CameraEvent.BeforeReflections)
+			{
+				cmd.SetRenderTarget(gBuffer, depth);
+			}
+		}
+
+		private static CommandBuffer GetOrAddBuffer(Camera cam, CameraEvent evt)
+		{
+			const string commandName = "Draw decals (DecalSystem)";
+			var cmd = cam.GetCommandBuffers(evt).FirstOrDefault(c => c.name == commandName);
+			if(cmd == null)
+				cam.AddCommandBuffer(evt, cmd = new CommandBuffer {name = commandName});
+			return cmd;
+		}
+
 		protected virtual void OnPreCull()
 		{
-			DecalManager.Current?.DrawDecals(GetComponent<Camera>());
+			var cam = GetComponent<Camera>();
+			if (prevRenderingPath != cam.actualRenderingPath)
+			{
+				if (cmdDepthTexture != null)
+					cam.RemoveCommandBuffer(evtDepthTexture, cmdDepthTexture);
+				if (cmdDepthZtest != null)
+					cam.RemoveCommandBuffer(evtDepthZtest, cmdDepthZtest);
+				prevRenderingPath = cam.actualRenderingPath;
+				GetCameraEvents(prevRenderingPath, out evtDepthTexture, out evtDepthZtest);
+				cmdDepthTexture = GetOrAddBuffer(cam, evtDepthTexture);
+				cmdDepthZtest = GetOrAddBuffer(cam, evtDepthZtest);
+			}
+			SetupCommandBuffer(evtDepthTexture, cmdDepthTexture);
+			SetupCommandBuffer(evtDepthZtest, cmdDepthZtest);
+			DecalManager.Current?.DrawDecals(cam, cmdDepthTexture, cmdDepthZtest);
+		}
+
+		protected virtual void OnPostRender()
+		{
+			cmdDepthTexture?.Clear();
+			cmdDepthZtest?.Clear();
 		}
 	}
 }

@@ -7,18 +7,6 @@ using static DecalSystem.ShaderKeywords;
 
 namespace DecalSystem
 {
-	public enum UvChannel
-	{
-		Uv1A,
-		Uv1B,
-		Uv2A,
-		Uv2B,
-		Uv3A,
-		Uv3B,
-		Uv4A,
-		Uv4B,
-	}
-
 	[RequireComponent(typeof(SkinnedMeshRenderer))]
 	[RendererType(typeof(SkinnedMeshRenderer))]
 	public class DecalSkinnedObject : DecalObjectBase
@@ -259,6 +247,17 @@ namespace DecalSystem
 
 		protected class SkinnedMeshChannel : SkinnedChannel
 		{
+			public enum UvChannel
+			{
+				Uv1A,
+				Uv1B,
+				Uv2A,
+				Uv2B,
+				Uv3A,
+				Uv3B,
+				Uv4A,
+				Uv4B,
+			}
 
 			private SkinnedMeshRenderer decalRenderer;
 			private readonly UvChannel uvChannel;
@@ -305,7 +304,7 @@ namespace DecalSystem
 
 			public static SkinnedMeshRenderer[] GetDecalRenderers(Transform parent) => usedChannels.Select(p => p.First).Where(p => p != null && p.transform.parent == parent).ToArray();
 
-			public static SkinnedMeshChannel TryCreate(DecalSkinnedObject obj, SkinnedMeshRenderer decalRenderer,
+			private static SkinnedMeshChannel TryCreate(DecalSkinnedObject obj, SkinnedMeshRenderer decalRenderer,
 				UvChannel uvChannel)
 			{
 				if(obj == null) throw new ArgumentNullException(nameof(obj));
@@ -329,19 +328,12 @@ namespace DecalSystem
 				this.decalRenderer = decalRenderer;
 				this.uvChannel = uvChannel;
 			}
-		}
 
-		protected virtual SkinnedChannel CreateChannel(DecalMaterial material)
-		{
-			if (material.IsModeSupported(SkinnedBuffer) && DecalManager.Current.CanDrawRenderers(material))
+			public static SkinnedMeshChannel Create(DecalSkinnedObject obj, DecalMaterial material)
 			{
-				var ret = new SkinnedBufferChannel(this);
-				channels.Add(ret);
-				ClearData();
-				return ret;
-			}
-			else if(material.IsModeSupported(SkinnedUv))
-			{
+				var skinnedRenderer = obj.SkinnedRenderer;
+				var transform = obj.transform;
+
 				const string decalRendererName = "__DECAL__";
 				// Try to find an existing renderer-channel pair that isn't used
 				for (int i = 0; i < transform.childCount; i++)
@@ -352,42 +344,65 @@ namespace DecalSystem
 					if (child.name != decalRendererName) continue;
 					for (var c = UvChannel.Uv1A; c <= UvChannel.Uv4B; c++)
 					{
-						var ret = SkinnedMeshChannel.TryCreate(this, smr, c);
+						var ret = TryCreate(obj, smr, c);
 						if (ret != null) return ret;
 					}
 				}
 				// Failing that, create a new renderer
 				// Don't save these; they are re-created when needed and just clutter up the scene file
-				var go = new GameObject(decalRendererName) {hideFlags = HideFlags.HideAndDontSave};
+				var go = new GameObject(decalRendererName) { hideFlags = HideFlags.HideAndDontSave };
 				go.transform.parent = transform;
 				var dr = go.AddComponent<SkinnedMeshRenderer>();
-				// Merge submeshes into one, allowing materials to just be put into one big list
-				if (mergedMesh == null)
-				{
-					var oldMesh = SkinnedRenderer.sharedMesh;
-					if (oldMesh.subMeshCount <= 1)
-						mergedMesh = SkinnedRenderer.sharedMesh;
-					else
-					{
-						mergedMesh = Instantiate(oldMesh);
-						mergedMesh.subMeshCount = 1;
-						mergedMesh.SetTriangles(oldMesh.triangles, 0);
-					}
-				}
+				var mergedMesh = obj.GetMergedMesh();
 				dr.sharedMesh = Instantiate(mergedMesh);
 				// In theory, the following can change at any time, so TODO: make sure these stay updated
-				dr.bones = SkinnedRenderer.bones;
-				dr.rootBone = SkinnedRenderer.rootBone;
-				dr.localBounds = SkinnedRenderer.localBounds;
-				dr.quality = SkinnedRenderer.quality;
-				dr.updateWhenOffscreen = SkinnedRenderer.updateWhenOffscreen;
-				var newC = SkinnedMeshChannel.TryCreate(this, dr, UvChannel.Uv1A);
-				if(newC == null) throw new Exception("TryCreate is null for a new renderer");
-				channels.Add(newC);
-				ClearData();
+				dr.bones = skinnedRenderer.bones;
+				dr.rootBone = skinnedRenderer.rootBone;
+				dr.localBounds = skinnedRenderer.localBounds;
+				dr.quality = skinnedRenderer.quality;
+				dr.updateWhenOffscreen = skinnedRenderer.updateWhenOffscreen;
+				var newC = TryCreate(obj, dr, UvChannel.Uv1A);
+				if (newC == null) throw new Exception("SkinnedMeshChannel.TryCreate is null for a new renderer");
 				return newC;
 			}
-			throw new Exception("No skinned modes supported for " + material);
+		}
+
+		protected Mesh GetMergedMesh()
+		{
+			// Merge submeshes into one, allowing materials to just be put into one big list
+			if (mergedMesh == null)
+			{
+				var oldMesh = SkinnedRenderer.sharedMesh;
+				if (oldMesh.subMeshCount <= 1)
+					mergedMesh = SkinnedRenderer.sharedMesh;
+				else
+				{
+					mergedMesh = Instantiate(oldMesh);
+					mergedMesh.subMeshCount = 1;
+					mergedMesh.SetTriangles(oldMesh.triangles, 0);
+				}
+			}
+			return mergedMesh;
+		}
+
+		protected virtual SkinnedChannel CreateChannel(DecalMaterial material)
+		{
+			SkinnedChannel ret;
+			if (material.IsModeSupported(SkinnedBuffer) && DecalManager.Current.CanDrawRenderers(material))
+			{
+				ret = new SkinnedBufferChannel(this);
+			}
+			else if (material.IsModeSupported(SkinnedUv))
+			{
+				ret = SkinnedMeshChannel.Create(this, material);
+			}
+			else
+			{
+				throw new Exception("No skinned modes supported for " + material);
+			}
+			channels.Add(ret);
+			ClearData();
+			return ret;
 		}
 
 		public void ClearChannels()
