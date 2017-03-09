@@ -6,23 +6,6 @@ using static DecalSystem.ShaderKeywords;
 
 namespace DecalSystem
 {
-	public struct DecalObjectData
-	{
-		public Renderer renderer;
-		public Mesh mesh;
-		public Material material;
-		public MaterialPropertyBlock properties;
-		public Transform transform;
-		public Matrix4x4 matrix;
-	}
-
-	public struct DecalRenderCommand
-	{
-		public DecalObjectData objectData;
-		public int[] passes;
-		public DepthTextureMode depthTextureMode;
-	}
-
 	/// <summary>
 	/// Draws decals using the Standard lighting model
 	/// </summary>

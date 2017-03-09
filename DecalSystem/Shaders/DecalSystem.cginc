@@ -298,11 +298,13 @@ void surf(Input IN, inout SurfaceOutputStandard o)
 	float2 uv;
 	CalculateUv(IN, uv);
 
-	OUTPUT_PARALLAX(uv);
-	OUTPUT_ALBEDO(uv, o.Albedo, o.Alpha);
-	OUTPUT_NORMAL(uv, o.Normal);
-	OUTPUT_METALLIC(uv, o.Smoothness, o.Metallic);
-	OUTPUT_EMISSION(uv, o.Emission);
+	//OUTPUT_PARALLAX(uv);
+	//OUTPUT_ALBEDO(uv, o.Albedo, o.Alpha);
+	//OUTPUT_NORMAL(uv, o.Normal);
+	//OUTPUT_METALLIC(uv, o.Smoothness, o.Metallic);
+	//OUTPUT_EMISSION(uv, o.Emission);
+	o.Albedo = float3(uv.x, uv.y, 0);
+	o.Alpha = 1;
 #endif
 }
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace DecalSystem
@@ -12,20 +11,9 @@ namespace DecalSystem
 		Blacklist,
 	}
 
+
 	public class DecalProjector : MonoBehaviour
 	{
-		private static readonly Vector3[] boundsPoints =
-		{
-			new Vector3( 1,  1,  1),
-			new Vector3(-1,  1,  1),
-			new Vector3( 1, -1,  1),
-			new Vector3( 1,  1, -1),
-			new Vector3(-1, -1,  1),
-			new Vector3(-1,  1, -1),
-			new Vector3( 1, -1, -1),
-			new Vector3(-1, -1, -1),        
-		};
-
 		[SerializeField] protected DecalMaterial decal;
 
 		[SerializeField] protected FilterMode objectFilterMode;
@@ -55,12 +43,7 @@ namespace DecalSystem
 
 		protected virtual Bounds GetBounds()
 		{
-			var w = boundsPoints.Select(v => transform.TransformPoint(v * 0.5f)).ToArray();
-			var extents = new Vector3(
-				w.Max(v => Mathf.Abs(v.x)),
-				w.Max(v => Mathf.Abs(v.y)),
-				w.Max(v => Mathf.Abs(v.z)));
-			return new Bounds(transform.position, extents);
+			return Util.UnitBounds(transform);
 		}
 
 		protected static bool FilterList<T>(List<T> list, FilterMode filterMode, T obj)
@@ -92,9 +75,8 @@ namespace DecalSystem
 			var projectorBounds = GetBounds();
 			foreach (var obj in allObjects)
 			{
-				var bounds = obj.Bounds;
-				if (bounds == null) continue;
-				if (!projectorBounds.Intersects(bounds.Value) ||
+				if (!obj.CanAddDecals) continue;
+				if (!projectorBounds.Intersects(obj.Bounds) ||
 					FilterList(objectFilter, objectFilterMode, obj)) continue;
 				if (obj.Renderer == null)
 				{
@@ -139,9 +121,8 @@ namespace DecalSystem
 			var projectorBounds = GetBounds();
 			foreach (var obj in allObjects)
 			{
-				var bounds = obj.Bounds;
-				if (bounds == null) continue;
-				if (!projectorBounds.Intersects(bounds.Value) ||
+				if (!obj.CanAddDecals) continue;
+				if (!projectorBounds.Intersects(obj.Bounds) ||
 					FilterList(objectFilter, objectFilterMode, obj)) continue;
 				if (obj.Renderer == null)
 				{

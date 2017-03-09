@@ -8,7 +8,7 @@ namespace DecalSystem
 {
 	/// <summary>
 	/// Like <c>Material</c>, but for decals. It can switch between shaders depending on the
-	/// required mode.
+	/// required mode, and caches material instances.
 	/// </summary>
 	/// <remarks>
 	/// See <c>DecalMaterialStandard</c> for guidance on how to inherit from this class
@@ -76,12 +76,9 @@ namespace DecalSystem
 
 		static PropertyActions[] GetPropertyActions(Type type)
 		{
-			PropertyActions[] ret;
-			if (propertyActions.TryGetValue(type, out ret))
+			if (propertyActions.TryGetValue(type, out PropertyActions[] ret))
 				return ret;
-			FieldInfo[] fields;
-			MaterialPropertyAttribute[] attrs;
-			GetFields(type, out fields, out attrs);
+			GetFields(type, out FieldInfo[] fields, out MaterialPropertyAttribute[] attrs);
 			var list = new List<PropertyActions>(fields.Length);
 			for (int i = 0; i < fields.Length; i++)
 			{
@@ -103,14 +100,11 @@ namespace DecalSystem
 		{
 			if (propertyMap == null)
 			{
-				FieldInfo[] fields;
-				MaterialPropertyAttribute[] attrs;
-				GetFields(GetType(), out fields, out attrs);
+				GetFields(GetType(), out FieldInfo[] fields, out MaterialPropertyAttribute[] attrs);
 				propertyMap = Enumerable.Range(0, fields.Length)
 					.ToDictionary(i => attrs[i].PropertyName, i => fields[i].Name);
 			}
-			string fieldName;
-			propertyMap.TryGetValue(propertyName, out fieldName);
+			propertyMap.TryGetValue(propertyName, out string fieldName);
 			return fieldName;
 		}
 
@@ -284,14 +278,13 @@ namespace DecalSystem
 			if (modeString == "")
 				return defaultMaterial != null ? defaultMaterial : (defaultMaterial
 					= CreateMaterial(""));
-			Material mat;
 			if (string.IsNullOrEmpty(propertyName))
 			{
 				propertyName = null;
 				value = 0;
 			}
 			var key = new MaterialCacheKey {modeKeyword = modeString, propertyName = propertyName, value = value};
-			materialCache.TryGetValue(key, out mat);
+			materialCache.TryGetValue(key, out Material mat);
 			if (mat != null && !mat.IsKeywordEnabled(modeString))
 			{
 				Debug.LogError($"Decal material keyword was modified! Expected {modeString}", mat);
@@ -325,11 +318,22 @@ namespace DecalSystem
 		/// <param name="removeKeyword">Called to remove a keyword</param>
 		public abstract void SetKeywords(Action<string> addKeyword, Action<string> removeKeyword);
 
+		/// <summary>
+		/// Sets the required keywords on a material instance
+		/// </summary>
+		/// <param name="m"></param>
 		public void SetKeywords(Material m)
 		{
 			SetKeywords(m.EnableKeyword, m.DisableKeyword);
 		}
 
+		/// <summary>
+		/// Checks whether the given drawing mode is supported for the current platform
+		/// </summary>
+		/// <remarks>This is usually called by decal objects looking for the most efficient
+		/// way to generate the required geometry.</remarks>
+		/// <param name="mode"></param>
+		/// <returns></returns>
 		public virtual bool IsModeSupported(string mode)
 		{
 			return GetShaderForMode(mode)?.isSupported ?? false;
@@ -361,6 +365,11 @@ namespace DecalSystem
 			return null;
 		}
 
+		/// <summary>
+		/// Checks whether the given material instance requires a camera depth texture to function
+		/// </summary>
+		/// <param name="mat"></param>
+		/// <returns></returns>
 		public abstract bool RequiresDepthTexture(Material mat);
 	}
 }

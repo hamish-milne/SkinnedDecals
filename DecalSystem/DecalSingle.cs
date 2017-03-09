@@ -4,23 +4,31 @@ using UnityEngine;
 
 namespace DecalSystem
 {
+	/// <summary>
+	/// A single screen-space decal instance
+	/// </summary>
 	public class DecalSingle : DecalObject
 	{
 		[SerializeField] protected DecalMaterial decalMaterial;
 
-		public override bool ScreenSpace => true;
-		public override Renderer Renderer => null;
-		public override Mesh Mesh => DecalScreenSpaceObject.CubeMesh;
-		public override Bounds? Bounds => null;
-		public override Material[] Materials => null;
-		public override string[] RequiredModes { get; } = {ShaderKeywords.ScreenSpace};
-
+		/// <summary>
+		/// The material to use
+		/// </summary>
 		public virtual DecalMaterial DecalMaterial
 		{
 			get { return decalMaterial; }
 			set { decalMaterial = value; }
 		}
 
+		public override bool ScreenSpace => true;
+		public override Renderer Renderer => null;
+		public override Mesh Mesh => DecalScreenSpaceObject.CubeMesh;
+		public override Bounds Bounds => Util.UnitBounds(transform);
+		public override Material[] Materials => null;
+		public override bool CanAddDecals => false;
+		public override bool ManualCulling => true;
+
+		// As we only have one instance to draw, we can re-use the instance and array here
 		private readonly IDecalDraw[] drawArray = new IDecalDraw[1];
 		private readonly DecalInstanceSingle single;
 
@@ -48,11 +56,17 @@ namespace DecalSystem
 			throw new NotSupportedException();
 		}
 
+		/// <summary>
+		/// Draws the outline box to make it easier to position in the editor
+		/// </summary>
 		protected virtual void OnDrawGizmosSelected()
 		{
 			DecalProjector.DrawGizmo(transform);
 		}
 
+		/// <summary>
+		/// The decal type for DecalSingle, bound to its parent object
+		/// </summary>
 		protected class DecalInstanceSingle : DecalInstanceBase
 		{
 			private readonly DecalSingle obj;
@@ -81,8 +95,6 @@ namespace DecalSystem
 				set { obj.enabled = value; }
 			}
 
-			
-
 			public DecalInstanceSingle(DecalSingle obj)
 			{
 				this.obj = obj;
@@ -91,11 +103,12 @@ namespace DecalSystem
 
 		public override void ClearData()
 		{
+			// None
 		}
 
 		public override IDecalDraw[] GetDecalDraws()
 		{
-			return enabled ? drawArray : null;
+			return drawArray;
 		}
 
 		public override void UpdateBackRefs()

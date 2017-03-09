@@ -1,24 +1,10 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
 namespace DecalSystem.Editor
 {
-	[CustomPropertyDrawer(typeof(RefreshOnChangeAttribute))]
-	public class RefreshOnChangeDrawer : PropertyDrawer
-	{
-		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
-		{
-			if (EditorGUI.PropertyField(position, property, label))
-			{
-				var dobj = property.serializedObject.targetObjects.OfType<DecalObject>().ToList();
-				DecalObject.RefreshAll(o => dobj.Contains(o));
-			}
-		}
-	}
-
 	/// <summary>
 	/// This lets us use GUILayout methods in a PropertyDrawer. I have no idea how or why this works.
 	/// </summary>
@@ -60,9 +46,7 @@ namespace DecalSystem.Editor
 			var m = (object)default(Matrix4x4);
 			foreach(var pair in matrixFields)
 				pair.Second.SetValue(m, property.FindPropertyRelative(pair.First).floatValue);
-			Vector3 mPos, mScale;
-			Quaternion mRotation;
-			Decompose((Matrix4x4)m, out mPos, out mRotation, out mScale);
+			Decompose((Matrix4x4)m, out Vector3 mPos, out Quaternion mRotation, out Vector3 mScale);
 			EditorGUI.BeginChangeCheck();
 			EditorGUI.indentLevel++;
 			mPos = EditorGUI.Vector3Field(TakeLine(position, ref y), "Position", mPos);

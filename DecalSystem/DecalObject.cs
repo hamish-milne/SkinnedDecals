@@ -6,125 +6,52 @@ using UnityEngine;
 
 namespace DecalSystem
 {
+	/// <summary>
+	/// Applied to a variable, this causes the editor to use use a property of the same name as the data source.
+	/// Works at the type root and for <c>DecalInstance</c>s
+	/// </summary>
 	public class UsePropertyAttribute : PropertyAttribute
 	{
 	}
 
-	public class RefreshOnChangeAttribute : PropertyAttribute
-	{
-		public RefreshAction RefreshAction { get; set; }
-
-		public RefreshOnChangeAttribute(RefreshAction refreshAction)
-		{
-			RefreshAction = refreshAction;
-		}
-	}
-
 	/// <summary>
-	/// Represents a mesh item that will be rendered with <c>Graphics.DrawMesh</c>
+	/// A single decal draw command, for one or more decal instances
 	/// </summary>
-	/// <remarks>
-	/// <c>DrawMesh</c> will automatically cull objects, calculate lighting in any rendering path,
-	/// and can have a <c>MaterialPropertyBlock</c> applied.
-	/// </remarks>
-	public struct MeshData
-	{
-		public DecalInstance instance;
-
-		/// <summary>
-		/// The mesh to draw
-		/// </summary>
-		public Mesh mesh;
-
-		public Renderer renderer;
-
-		/// <summary>
-		/// The submesh index
-		/// </summary>
-		public int submesh;
-
-		/// <summary>
-		/// The base transform to draw the mesh on.
-		/// Uses the <c>localToWorldMatrix</c>, or the identity if this field is <c>null</c>
-		/// </summary>
-		public Transform transform;
-
-		/// <summary>
-		/// An extra matrix that is applied after the transform
-		/// </summary>
-		public Matrix4x4? matrix;
-
-		/// <summary>
-		/// The material to use
-		/// </summary>
-		public Material material;
-
-		/// <summary>
-		/// Extra material properties
-		/// </summary>
-		public MaterialPropertyBlock materialPropertyBlock;
-
-		public Matrix4x4? GetFinalMatrix()
-		{
-			Matrix4x4 m;
-			if (transform != null && matrix != null)
-				m = transform.localToWorldMatrix * matrix.Value;
-			else if (transform != null)
-				m = transform.localToWorldMatrix;
-			else if (matrix != null)
-				m = matrix.Value;
-			else return null;
-			return m;
-		}
-	}
-
 	public interface IDecalDraw
 	{
+		/// <summary>
+		/// If <c>false</c>, this instance will be ignored
+		/// </summary>
 		bool Enabled { get; }
-		DecalObject DecalObject { get; }
+
+		/// <summary>
+		/// The <c>DecalMaterial</c> being used
+		/// </summary>
 		DecalMaterial DecalMaterial { get; }
-		void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers);
-	}
-
-	/// <summary>
-	/// Defines the action(s) that triggered a Refresh of the given object
-	/// </summary>
-	[Flags]
-	public enum RefreshAction
-	{
-		/// <summary>
-		/// Nothing.
-		/// </summary>
-		None = 0,
 
 		/// <summary>
-		/// A <c>DecalInstance</c> was enabled/disabled
+		/// Retrieves information necessary to execute the draw command
 		/// </summary>
-		EnableDisable = 1 << 0,
-
-		/// <summary>
-		/// A <c>DecalInstance</c>'s <c>DecalMaterial</c> was changed
-		/// </summary>
-		ChangeInstanceMaterial = 1 << 1,
-
-		/// <summary>
-		/// A <c>DecalMaterial</c>'s properties were changed
-		/// </summary>
-		MaterialPropertiesChanged = 1 << 2,
-
-		/// <summary>
-		/// The list of active scene cameras and/or rendering paths were changed
-		/// </summary>
-		CamerasChanged = 1 << 3,
-
-		/// <summary>
-		/// The properties of the attached renderer changed. This may cause decal instances to be wiped
-		/// </summary>
-		RendererChanged = 1 << 4,
+		/// <param name="dcam">The <c>DecalCamera</c> currently rendering</param>
+		/// <param name="mesh">A <c>Mesh</c> to be drawn. Defaults to <c>null</c></param>
+		/// <param name="renderer">A <c>Renderer</c> to be drawn. Defaults to <c>null</c></param>
+		/// <param name="submesh">The submesh index to draw. Defaults to 0</param>
+		/// <param name="material">The material to be used for the draw. Cannot be <c>null</c></param>
+		/// <param name="propertyBlock">A property block that can provide extra material properties. Defaults to <c>null</c></param>
+		/// <param name="matrix">The locak to world matrix of the mesh or renderer. Defaults to <c>Matrix4x4.identity</c></param>
+		/// <param name="buffers">Because <c>MaterialPropertyBlock</c> does not support setting <c>ComputeBuffer</c>
+		/// properties for <c>CommandBuffer</c> commands, to properly set them they must be added here.</param>
+		/// <remarks>
+		/// This will be called once for each camera where the object is in view.
+		/// <c>Mesh</c> and <c>Renderer</c> cannot both be set to non-null values.
+ 		/// </remarks>
+		void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer,
+			ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock,
+			ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers);
 	}
 	
 	/// <summary>
-	/// Represents one (or more) decal instances
+	/// Represents a single decal instance
 	/// </summary>
 	[Serializable]
 	public abstract class DecalInstance
@@ -158,13 +85,26 @@ namespace DecalSystem
 		}
 	}
 
+	/// <summary>
+	/// A common use-case of <c>DecalInstance</c>, where each one is a separate draw call
+	/// </summary>
 	[Serializable]
 	public abstract class DecalInstanceBase : DecalInstance, IDecalDraw
 	{
+		/// <summary>
+		/// The decal-to-object matrix, if any
+		/// </summary>
 		public abstract Matrix4x4? LocalMatrix { get; }
 		
+		/// <summary>
+		/// The material mode keyword
+		/// </summary>
 		public abstract string ModeString { get; }
 
+		/// <summary>
+		/// Gets the default matrix from <c>LocalMatrix</c> and the object's transform
+		/// </summary>
+		/// <returns></returns>
 		protected Matrix4x4 DefaultMatrix()
 		{
 			Matrix4x4 m;
@@ -181,13 +121,22 @@ namespace DecalSystem
 			return m;
 		}
 
-		public virtual void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
+		/// <summary>
+		/// Sets <c>matrix</c> and <c>material</c>
+		/// </summary>
+		/// <inheritdoc />
+		public virtual void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer,
+			ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock,
+			ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
 		{
 			matrix = DefaultMatrix();
 			material = DecalMaterial?.GetMaterial(ModeString);
 		}
 	}
 
+	/// <summary>
+	/// Indicates that the below <c>DecalObject</c> should be created by default for the component type given
+	/// </summary>
 	[AttributeUsage(AttributeTargets.Class)]
 	public class RendererTypeAttribute : Attribute
 	{
@@ -206,28 +155,31 @@ namespace DecalSystem
 	public abstract class DecalObject : MonoBehaviour
 	{
 
+		// Maps component types to their default renderer
 		private static readonly Dictionary<Type, Type> rendererTypeMap = Util.GetAllTypes()
 			.Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(DecalObject)))
 			.ToDictionaryPermissive(
 				t => ((RendererTypeAttribute) Attribute.GetCustomAttribute(t, typeof(RendererTypeAttribute)))?.Type,
 				t => t);
 
+		/// <summary>
+		/// Gets or creates a <c>DecalObject</c> for the given object
+		/// </summary>
+		/// <param name="obj"></param>
+		/// <returns>Always a <c>DecalObject</c> component of the given object</returns>
 		public static DecalObject GetOrCreate(GameObject obj)
 		{
 			var ret = obj.GetComponent<DecalObject>();
 			if (ret != null) return ret;
 			foreach (var c in obj.GetComponents(typeof(Component)))
 			{
-				Type doType;
-				if (rendererTypeMap.TryGetValue(c.GetType(), out doType))
-					return (DecalObject) obj.AddComponent(doType);
+				if (rendererTypeMap.TryGetValue(c.GetType(), out var doType))
+					return (DecalObject)obj.AddComponent(doType);
 			}
 			return (DecalObject) obj.AddComponent(rendererTypeMap[typeof(object)]);
 		}
 
-
-		public abstract string[] RequiredModes { get; }
-
+		// Global list of active objects, so we can easily access them in the camera
 		private static List<DecalObject> activeObjects;
 		private static ReadOnlyCollection<DecalObject> activeObjectsReadonly;
 
@@ -251,9 +203,14 @@ namespace DecalSystem
 		}
 
 		/// <summary>
-		/// The world-space bounds of the object. If this is <c>null</c>, new decals cannot be added
+		/// The world-space bounds of the object
 		/// </summary>
-		public abstract Bounds? Bounds { get; }
+		public abstract Bounds Bounds { get; }
+
+		/// <summary>
+		/// If <c>false</c>, <c>AddDecal</c> and <c>RemoveDecal</c> are not supported
+		/// </summary>
+		public abstract bool CanAddDecals { get; }
 
 		/// <summary>
 		/// The renderer the object is attached to. Can be <c>null</c> for screen space decals.
@@ -264,6 +221,12 @@ namespace DecalSystem
 		/// The renderer's shared materials, if any.
 		/// </summary>
 		public virtual Material[] Materials => Renderer?.sharedMaterials;
+
+		/// <summary>
+		/// If true, we need to manually test this object's bounds with the camera's frustum.
+		/// This isn't the cheapest operation; ideally call <c>DecalCamera.RenderObject</c>
+		/// </summary>
+		public virtual bool ManualCulling => false;
 
 		/// <summary>
 		/// The mesh drawn by the object. For geometry-based objects this is the normal shared
@@ -286,21 +249,39 @@ namespace DecalSystem
 		/// </summary>
 		public abstract bool ScreenSpace { get; }
 
+		/// <summary>
+		/// The number of decal instances, enabled or otherwise
+		/// </summary>
 		public abstract int Count { get; }
 
+		/// <summary>
+		/// Gets the decal instance at the given index
+		/// </summary>
+		/// <param name="index">A value between 0 and <c>Count</c></param>
+		/// <returns>A non-null <c>DecalInstance</c></returns>
 		public abstract DecalInstance GetDecal(int index);
 
-		public virtual bool RemoveDecal(int index)
+		/// <summary>
+		/// Removes the decal at the given index
+		/// </summary>
+		/// <param name="index">A value between 0 and <c>Count</c></param>
+		public void RemoveDecal(int index)
 		{
-			return RemoveDecal(GetDecal(index));
+			RemoveDecal(GetDecal(index));
 		}
 
+		/// <summary>
+		/// Removes the given decal
+		/// </summary>
+		/// <param name="instance">A decal instance, or <c>null</c></param>
+		/// <returns>True if the decal was present and is now removed, otherwise false</returns>
 		public abstract bool RemoveDecal(DecalInstance instance);
 
 		/// <summary>
 		/// Gets the collection of draw commands for the given rendering path
 		/// </summary>
-		/// <returns>The rendering data, cached at this level, or <c>null</c></returns>
+		/// <returns>The array of draw commands, or <c>null</c></returns>
+		/// <remarks>This will never be called if the object is disabled</remarks>
 		public abstract IDecalDraw[] GetDecalDraws();
 
 		/// <summary>
@@ -325,7 +306,7 @@ namespace DecalSystem
 		}
 
 		/// <summary>
-		/// Refreshes all active objects
+		/// Clears data for all active objects
 		/// </summary>
 		/// <param name="predicate">Filters the objects to refresh. Disable with <c>null</c></param>
 		public static void RefreshAll(Predicate<DecalObject> predicate = null)
@@ -339,6 +320,9 @@ namespace DecalSystem
 			}
 		}
 
+		/// <summary>
+		/// Clears any cached data
+		/// </summary>
 		public abstract void ClearData();
 
 		/// <summary>
@@ -372,6 +356,9 @@ namespace DecalSystem
 			}
 		}
 
+		/// <summary>
+		/// Updates non-serialized back-references between instances and the object
+		/// </summary>
 		public abstract void UpdateBackRefs();
 	}
 
@@ -380,10 +367,12 @@ namespace DecalSystem
 	/// </summary>
 	/// <remarks>
 	/// While <c>DecalObject</c> provides the broadest extensibility, <c>DecalObjectBase</c>
-	/// provides common functionality for common use cases.
+	/// provides common functionality for common use cases. In particular, the result of <c>GetDecalDraws</c>
+	/// is cached, and automatic culling is implemented.
 	/// </remarks>
 	public abstract class DecalObjectBase : DecalObject
 	{
+		public override bool ScreenSpace => false;
 
 		public override void ClearData()
 		{
@@ -405,6 +394,8 @@ namespace DecalSystem
 				.Select(GetDecal)
 				.OfType<IDecalDraw>();
 		}
+
+		public override bool CanAddDecals => true;
 
 		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
 		{
@@ -433,6 +424,7 @@ namespace DecalSystem
 
 		protected virtual void OnWillRenderObject()
 		{
+			if (ManualCulling) return;
 			var dcam = Camera.current.GetComponent<DecalCamera>();
 			if (dcam != null)
 				dcam.RenderObject(this);

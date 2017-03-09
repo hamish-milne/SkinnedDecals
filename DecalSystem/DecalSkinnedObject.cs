@@ -11,9 +11,6 @@ namespace DecalSystem
 	[RendererType(typeof(SkinnedMeshRenderer))]
 	public class DecalSkinnedObject : DecalObjectBase
 	{
-		private static readonly string[] modes = { SkinnedBuffer, SkinnedUv };
-
-		public override string[] RequiredModes => modes;
 
 		[SerializeField, UseProperty] protected bool allowMerge;
 
@@ -173,7 +170,7 @@ namespace DecalSystem
 						{
 							if (float.IsInfinity(uvData[i].x) || float.IsInfinity(instance.uvData[j].x))
 								continue;
-							uvData[i] = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+							uvData[i] = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
 						}
 						Update();
 					}
@@ -469,7 +466,7 @@ namespace DecalSystem
 			return inst;
 		}
 
-		public override Bounds? Bounds => SkinnedRenderer.bounds;
+		public override Bounds Bounds => SkinnedRenderer.bounds;
 
 		public override Mesh Mesh => SkinnedRenderer.sharedMesh;
 
@@ -521,8 +518,7 @@ namespace DecalSystem
 
 		public override bool RemoveDecal(DecalInstance instance)
 		{
-			var inst = instance as SkinnedInstance;
-			if (inst != null && instances.Remove(inst))
+			if (instance is SkinnedInstance inst && instances.Remove(inst))
 			{
 				inst.RemoveFromChannel();
 				return true;

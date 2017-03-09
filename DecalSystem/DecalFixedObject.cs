@@ -9,32 +9,34 @@ namespace DecalSystem
 	/// <summary>
 	/// Renders decals on a fixed <c>MeshRenderer</c>
 	/// </summary>
-	[RequireComponent(typeof(MeshRenderer))]
+	[RequireComponent(typeof(MeshRenderer), typeof(MeshFilter))]
 	[RendererType(typeof(MeshRenderer))]
 	public class DecalFixedObject : DecalObjectBase
 	{
-		private static readonly string[] modes = {FixedSingle, Fixed4, Fixed8};
-
-		public override string[] RequiredModes => modes;
 
 		public override Renderer Renderer => MeshRenderer;
+		public override Bounds Bounds => MeshRenderer.bounds;
+		public override Mesh Mesh => MeshFilter.sharedMesh;
 
-		public override Bounds? Bounds => MeshRenderer.bounds;
+		public MeshFilter MeshFilter { get; private set; }
+		public MeshRenderer MeshRenderer { get; private set; }
 
-		private Mesh mesh;
-		private MeshRenderer meshRenderer;
+		protected override void OnEnable()
+		{
+			base.OnEnable();
+			MeshFilter = GetComponent<MeshFilter>();
+			MeshRenderer = GetComponent<MeshRenderer>();
+		}
 
-		public override Mesh Mesh =>
-			mesh != null ? mesh : (mesh = GetComponent<MeshFilter>().sharedMesh);
-
-		public MeshRenderer MeshRenderer =>
-			meshRenderer != null ? meshRenderer : (meshRenderer = GetComponent<MeshRenderer>());
-
-		public override bool ScreenSpace => false;
-
+		/// <summary>
+		/// The list of instances
+		/// </summary>
 		[SerializeField]
 		protected List<FixedInstance> instances = new List<FixedInstance>();
 
+		/// <summary>
+		/// A decal instance with a local matrix and submesh index
+		/// </summary>
 		[Serializable]
 		protected class FixedInstance : DecalInstance
 		{
@@ -66,6 +68,12 @@ namespace DecalSystem
 			}
 		}
 
+		/// <summary>
+		/// A group of Fixed decal instances. The shader supports 1, 4 or 8 decals drawn at once
+		/// </summary>
+		/// <remarks>
+		/// This uses a property block to provide the array of matrices to the shader
+		/// </remarks>
 		protected class FixedDraw : IDecalDraw
 		{
 			public virtual bool Enabled => true;
@@ -81,7 +89,9 @@ namespace DecalSystem
 			private Material mat;
 			private readonly List<Matrix4x4> matrixList = new List<Matrix4x4>();
 
-			public void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
+			public void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer,
+				ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock,
+				ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
 			{
 				mesh = DecalObject.Mesh;
 				submesh = Submesh;
@@ -90,6 +100,9 @@ namespace DecalSystem
 				matrix = DecalObject.transform.localToWorldMatrix;
 			}
 
+			/// <summary>
+			/// Updates the material instance and property block
+			/// </summary>
 			public void UpdateMaterial()
 			{
 				var mode = FixedSingle;
@@ -116,12 +129,14 @@ namespace DecalSystem
 			}
 		}
 
+		// Cached list of draw groups
 		private readonly List<FixedDraw> drawGroups = new List<FixedDraw>();
 
 		public override IEnumerable<IDecalDraw> GetDrawsUncached()
 		{
 			foreach(var g in drawGroups)
 				g.Instances.Clear();
+			// Groups instances together in FixedDraws
 			foreach (var o in instances)
 			{
 				if (!o.Enabled || o.DecalMaterial == null) continue;
@@ -145,7 +160,6 @@ namespace DecalSystem
 				g.UpdateMaterial();
 			return drawGroups.Cast<IDecalDraw>();
 		}
-
 
 		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
 		{

@@ -53,10 +53,10 @@
 			// For some reason Metal reports as SM4, when it really isn't
 			// Might as well exclude it rather than wasting time trying to compile. If Metal gets better try commenting this out.
 			#pragma exclude_renderers metal
-			#pragma shader_feature _ _PARALLAXMAP _NORMALMAP // Parallax takes priority - needs to be first
-			#pragma shader_feature _ _METALLICGLOSSMAP
-			#pragma shader_feature _ _EMISSION
-			#pragma shader_feature _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV _FIXED8 _SKINNEDBUFFER
+			#pragma multi_compile _ _PARALLAXMAP _NORMALMAP // Parallax takes priority - needs to be first
+			#pragma multi_compile _ _METALLICGLOSSMAP
+			#pragma multi_compile _ _EMISSION
+			#pragma multi_compile _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV _FIXED8 _SKINNEDBUFFER
 			#pragma surface surf Standard nometa vertex:vert finalgbuffer:FinalGBuffer finalcolor:FinalColor keepalpha nolightmap
 
 			#include "DecalSystem.cginc"
@@ -74,9 +74,9 @@
 				CGPROGRAM
 				#pragma target 4.0
 				#pragma exclude_renderers metal
-				#pragma shader_feature _ _PARALLAXMAP
-				#pragma shader_feature _ _METALLICGLOSSMAP
-				#pragma shader_feature _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV _FIXED8 _SKINNEDBUFFER
+				#pragma multi_compile _ _PARALLAXMAP
+				#pragma multi_compile _ _METALLICGLOSSMAP
+				#pragma multi_compile _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV _FIXED8 _SKINNEDBUFFER
 				#pragma vertex SmoothnessVert
 				#pragma fragment SmoothnessFrag
 
@@ -91,10 +91,10 @@
 			#pragma target 3.0
 			// d3d11_9x basically doesn't work with anything, even a simple surface shader
 			#pragma exclude_renderers d3d11_9x
-			#pragma shader_feature _ _PARALLAXMAP _NORMALMAP
-			#pragma shader_feature _ _METALLICGLOSSMAP
-			#pragma shader_feature _ _EMISSION
-			#pragma shader_feature _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV
+			#pragma multi_compile _ _PARALLAXMAP _NORMALMAP
+			#pragma multi_compile _ _METALLICGLOSSMAP
+			#pragma multi_compile _ _EMISSION
+			#pragma multi_compile _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV
 			#pragma surface surf Standard nometa vertex:vert finalgbuffer:FinalGBuffer finalcolor:FinalColor keepalpha nolightmap
 
 			#include "DecalSystem.cginc"
@@ -112,9 +112,9 @@
 				CGPROGRAM
 				#pragma target 3.0
 				#pragma exclude_renderers d3d11_9x
-				#pragma shader_feature _ _PARALLAXMAP
-				#pragma shader_feature _ _METALLICGLOSSMAP
-				#pragma shader_feature _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV
+				#pragma multi_compile _ _PARALLAXMAP
+				#pragma multi_compile _ _METALLICGLOSSMAP
+				#pragma multi_compile _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV
 				#pragma vertex SmoothnessVert
 				#pragma fragment SmoothnessFrag
 

@@ -7,9 +7,6 @@ namespace DecalSystem
 	[RendererType(typeof(Terrain))]
 	public class DecalScreenSpaceObject : DecalObjectBase
 	{
-		private static readonly string[] modes = {ShaderKeywords.ScreenSpace};
-
-		public override string[] RequiredModes => modes;
 
 		[Serializable]
 		protected class ScreenSpaceInstance : DecalInstanceBase
@@ -47,7 +44,7 @@ namespace DecalSystem
 
 		public override bool ScreenSpace => true;
 
-		public override Bounds? Bounds => bounds;
+		public override Bounds Bounds => bounds;
 
 		public override Renderer Renderer => null;
 
