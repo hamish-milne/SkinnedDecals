@@ -34,11 +34,12 @@ namespace DecalSystem
 		public override void SetKeywords(Action<string> addKeyword, Action<string> removeKeyword)
 		{
 			if (parallaxMap)
-				addKeyword("_PARALLAXMAP");
+				addKeyword("_POM"); // TODO: Replace with user option
 			else if (normal)
 				addKeyword("_NORMALMAP");
 			else
 			{
+				removeKeyword("_POM");
 				removeKeyword("_PARALLAXMAP");
 				removeKeyword("_NORMALMAP");
 			}

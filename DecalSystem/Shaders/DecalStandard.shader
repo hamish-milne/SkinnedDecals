@@ -12,13 +12,11 @@
 		_BumpScale("Scale", Float) = 1.0
 		_BumpMap("Normal Map", 2D) = "bump" {}
 
-		_Parallax ("Height Scale", Range (0.0005, 0.08)) = 0.02
+		_Parallax ("Height Scale", Range (0, 1)) = 0.2
 		_ParallaxMap ("Height Map", 2D) = "black" {}
 
 		[HDR] _EmissionColor("Emission color", Color) = (0,0,0)
 		_EmissionMap("Emission map", 2D) = "white" {}
-
-		_Cull ("Cull", Float) = 2
 	}
 
 	Category
@@ -54,7 +52,7 @@
 			// For some reason Metal reports as SM4, when it really isn't
 			// Might as well exclude it rather than wasting time trying to compile. If Metal gets better try commenting this out.
 			#pragma exclude_renderers metal
-			#pragma multi_compile _ _PARALLAXMAP _NORMALMAP // Parallax takes priority - needs to be first
+			#pragma multi_compile _ _POM _PARALLAXMAP _NORMALMAP // Parallax takes priority - needs to be first
 			#pragma multi_compile _ _METALLICGLOSSMAP
 			#pragma multi_compile _ _EMISSION
 			#pragma multi_compile _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV _FIXED8 _SKINNEDBUFFER
@@ -75,7 +73,7 @@
 				CGPROGRAM
 				#pragma target 4.0
 				#pragma exclude_renderers metal
-				#pragma multi_compile _ _PARALLAXMAP
+				#pragma multi_compile _ _POM _PARALLAXMAP
 				#pragma multi_compile _ _METALLICGLOSSMAP
 				#pragma multi_compile _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV _FIXED8 _SKINNEDBUFFER
 				#pragma vertex SmoothnessVert
@@ -92,7 +90,7 @@
 			#pragma target 3.0
 			// d3d11_9x basically doesn't work with anything, even a simple surface shader
 			#pragma exclude_renderers d3d11_9x
-			#pragma multi_compile _ _PARALLAXMAP _NORMALMAP
+			#pragma multi_compile _ _POM _PARALLAXMAP _NORMALMAP
 			#pragma multi_compile _ _METALLICGLOSSMAP
 			#pragma multi_compile _ _EMISSION
 			#pragma multi_compile _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV
@@ -113,7 +111,7 @@
 				CGPROGRAM
 				#pragma target 3.0
 				#pragma exclude_renderers d3d11_9x
-				#pragma multi_compile _ _PARALLAXMAP
+				#pragma multi_compile _ _POM _PARALLAXMAP
 				#pragma multi_compile _ _METALLICGLOSSMAP
 				#pragma multi_compile _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV
 				#pragma vertex SmoothnessVert

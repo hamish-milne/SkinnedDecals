@@ -11,6 +11,11 @@
 #define FIXED_COUNT (8)
 #endif
 
+#ifdef _POM
+#define _PARALLAXMAP
+#include "ParallaxOcclusion.cginc"
+#endif
+
 #ifdef _PARALLAXMAP
 #define _NORMALMAP
 #endif
@@ -34,7 +39,9 @@
 
 struct Input
 {
-#ifdef _PARALLAXMAP
+#ifdef _POM
+	float4 pomData : TEXCOORD0;
+#elif defined(_PARALLAXMAP)
 	float3 viewDirForParallax : TEXCOORD0;
 #endif
 #ifdef _SCREENSPACE
@@ -134,10 +141,6 @@ float3 GetDecalPos(float4x4 mat, float4 vertex)
 void vert(inout appdata_full v, out Input o)
 {
 	UNITY_INITIALIZE_OUTPUT(Input, o);
-#ifdef _PARALLAXMAP
-	TANGENT_SPACE_ROTATION;
-	o.viewDirForParallax = mul(rotation, ObjSpaceViewDir(v.vertex));
-#endif
 
 #ifdef _SKINNEDBUFFER
 	o.decalPos = float3(_Buffer[v.id], 0);
@@ -190,10 +193,19 @@ void vert(inout appdata_full v, out Input o)
 	if (o.decalPos.x < -1e20) // Cull out of bounds vertices
 		v.vertex = float4(0, 0, 0, 0);
 #endif
+
+#ifdef _POM
+	parallax_vert(v.vertex, v.normal, v.tangent, o.pomData.xyz, o.pomData.w);
+#elif defined(_PARALLAXMAP)
+	TANGENT_SPACE_ROTATION;
+	o.viewDirForParallax = mul(rotation, ObjSpaceViewDir(v.vertex));
+#endif
 }
 
-#ifdef _PARALLAXMAP
-#define OUTPUT_PARALLAX(UV) { UV.xy += ParallaxOffset(tex2D(_ParallaxMap, UV).g, _Parallax, IN.viewDirForParallax); }
+#ifdef _POM
+#define OUTPUT_PARALLAX(UV) { UV.xy += parallax_offset(_Parallax, IN.pomData.xyz, IN.pomData.w, UV, _ParallaxMap, 4, 30); }
+#elif defined(_PARALLAXMAP)
+#define OUTPUT_PARALLAX(UV) { UV.xy += ParallaxOffset(tex2D(_ParallaxMap, UV).g, lerp(0.005, 0.08, _Parallax), IN.viewDirForParallax); }
 #else
 #define OUTPUT_PARALLAX(UV)
 #endif
@@ -284,8 +296,7 @@ void surf(Input IN, inout SurfaceOutputStandard o)
 
 	// For Forward, approximate blending of smoothness and metallic
 	// by tending toward 0.5
-#if defined(UNITY_PASS_FORWARDBASE) || defined(UNITY_PASS_FORWARDADD)
-	o.Alpha = 1;
+#if defined(UNITY_PASS_FORWARDBASE) || defined(UNITY_PASS_FORWARDADD) // Not sure if these defines are working..
 	o.Smoothness = lerp(0.5, o.Smoothness, o.Alpha);
 	o.Metallic = lerp(0.5, o.Metallic, o.Alpha);
 #endif
