@@ -11,8 +11,8 @@
 
 		public const string ScreenSpace = "_SCREENSPACE";
 
-		public const string ProjectorSingle = "_Projector";
-		public const string ProjectorMulti = "_Projectors";
+		public const string ProjectorSingle = "_PrSingle";
+		public const string ProjectorMulti = "_PrMulti";
 
 		public const string Buffer = "_Buffer";
 		public const string UvChannel = "_UvChannel";

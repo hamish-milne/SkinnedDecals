@@ -143,7 +143,7 @@ namespace DecalSystem
 				}
 				for (int i = instance.uvDataStart, j = 0; j < instance.uvData.Length && i < uvData.Length; i++, j++)
 				{
-					if (float.IsInfinity(uvData[i].x) || float.IsInfinity(instance.uvData[j].x))
+					if (float.IsInfinity(instance.uvData[j].x))
 						continue;
 					uvData[i] = instance.uvData[j];
 				}
@@ -170,7 +170,7 @@ namespace DecalSystem
 						{
 							if (float.IsInfinity(uvData[i].x) || float.IsInfinity(instance.uvData[j].x))
 								continue;
-							uvData[i] = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+							uvData[i] = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
 						}
 						Update();
 					}
@@ -188,6 +188,8 @@ namespace DecalSystem
 			{
 				this.obj = obj;
 				uvData = new Vector2[obj.Mesh.vertexCount];
+				for(int i = 0; i < uvData.Length; i++)
+					uvData[i] = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
 			}
 
 			public abstract void Dispose();

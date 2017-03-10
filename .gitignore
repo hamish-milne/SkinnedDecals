@@ -1,6 +1,7 @@
 Assembly-*
 Assets/DecalSystem/*
 DecalSystem.VC.*
+.vs/*
 
 /[Ll]ibrary/
 /[Tt]emp/

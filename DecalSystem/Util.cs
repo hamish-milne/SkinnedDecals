@@ -44,11 +44,10 @@ namespace DecalSystem
 
 		public static T GetDelegate<T>(Type type, string method, bool isStatic) where T : class
 		{
-			var binding = BindingFlags.Public | BindingFlags.NonPublic | (isStatic ? BindingFlags.Static : BindingFlags.Instance);
+			var binding = BindingFlags.Public | BindingFlags.NonPublic
+				| (isStatic ? BindingFlags.Static : BindingFlags.Instance);
 			return (T)(object)Delegate.CreateDelegate(typeof(T), type.GetMethod(method, binding), false);
 		}
-
-		private static void Nop<T>(this T o) { }
 
 		private static readonly Func<UnityEngine.Object, bool> isNativeObjectAlive =
 			GetDelegate<Func<UnityEngine.Object, bool>>(typeof(UnityEngine.Object), "IsNativeObjectAlive", true);	

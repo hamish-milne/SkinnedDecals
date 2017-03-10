@@ -4,15 +4,15 @@
 
 // Infer some defines from the shader keywords
 #ifdef _FIXED4
-	#define _FIXEDMULTI
-	#define FIXED_COUNT (4)
+#define _FIXEDMULTI
+#define FIXED_COUNT (4)
 #elif defined(_FIXED8)
-	#define _FIXEDMULTI
-	#define FIXED_COUNT (8)
+#define _FIXEDMULTI
+#define FIXED_COUNT (8)
 #endif
 
 #ifdef _PARALLAXMAP
-	#define _NORMALMAP
+#define _NORMALMAP
 #endif
 
 // The surface shader generator doesn't like
@@ -46,11 +46,11 @@ struct Input
 	float4 decal1X : TEXCOORD3;
 	float4 decal1Y : TEXCOORD4;
 	float4 decal1Z : TEXCOORD5;
-	#ifdef _FIXED8
+#ifdef _FIXED8
 	float4 decal2X : TEXCOORD6;
 	float4 decal2Y : TEXCOORD7;
 	float4 decal2Z : TEXCOORD8;
-	#endif
+#endif
 #elif defined(_SCREENSPACE)
 	float3 localCameraPos : TEXCOORD3;
 #else
@@ -84,10 +84,10 @@ uniform Buffer<float2> _Buffer;
 uniform uint _UvChannel;
 
 #elif defined(_FIXEDMULTI)
-uniform float4x4 _Projectors[FIXED_COUNT];
+uniform float4x4 _PrMulti[FIXED_COUNT];
 
 #elif defined(_FIXEDSINGLE)
-uniform float4x4 _Projector;
+uniform float4x4 _PrSingle;
 
 #elif defined(_SCREENSPACE)
 uniform sampler2D_float _CameraDepthTexture;
@@ -156,27 +156,27 @@ void vert(inout appdata_full v, out Input o)
 	o.decalPos = float3(channels[_UvChannel], 0);
 	FIX_ORIENTATION(o.decalPos);
 #elif defined(_FIXEDSINGLE)
-	o.decalPos = GetDecalPos(_Projector, v.vertex);
+	o.decalPos = GetDecalPos(_PrSingle, v.vertex);
 #elif defined(_FIXEDMULTI)
 
-#define FIXED_DECAL(I, A, B) { float3 p = GetDecalPos(_Projectors[I], v.vertex); A##X.##B = p.x; A##Y.##B = p.y; A##Z.##B = p.z; }
+#define FIXED_DECAL(I, A, B) { float3 p = GetDecalPos(_PrMulti[I], v.vertex); A##X.##B = p.x; A##Y.##B = p.y; A##Z.##B = p.z; }
 
 	FIXED_DECAL(0, o.decal1, x);
 	FIXED_DECAL(1, o.decal1, y);
 	FIXED_DECAL(2, o.decal1, z);
 	FIXED_DECAL(3, o.decal1, w);
-	#ifdef _FIXED8
+#ifdef _FIXED8
 	FIXED_DECAL(4, o.decal2, x);
 	FIXED_DECAL(5, o.decal2, y);
 	FIXED_DECAL(6, o.decal2, z);
 	FIXED_DECAL(7, o.decal2, w);
-	#endif
+#endif
 
 #undef FIXED_DECAL
 
 #elif defined(_SCREENSPACE)
 	o.screen = ComputeScreenPos(mul(UNITY_MATRIX_MVP, v.vertex));
-	o.localCameraPos = mul(_World2Object, float4(_WorldSpaceCameraPos, 1));
+	o.localCameraPos = mul(unity_WorldToObject, float4(_WorldSpaceCameraPos, 1));
 	o.ray = v.vertex - o.localCameraPos;
 
 	// Fix the vertex normal and tangent to always be top-facing
@@ -184,6 +184,11 @@ void vert(inout appdata_full v, out Input o)
 	v.tangent = fixed4(-1, 0, 0, -1);
 #else
 	o.decalPos = v.texcoord.xyz;
+#endif
+
+#if !defined(_SCREENSPACE) && !defined(_FIXEDMULTI)
+	if (o.decalPos.x < -1e20) // Cull out of bounds vertices
+		v.vertex = float4(0, 0, 0, 0);
 #endif
 }
 
@@ -238,19 +243,19 @@ void surf(Input IN, inout SurfaceOutputStandard o)
 {
 
 #ifdef _FIXEDMULTI
-	float3 decalPos[FIXED_COUNT] = { 
+	float3 decalPos[FIXED_COUNT] = {
 #define DECAL_ARRAY_ITEM(N, C) float3(N##X.##C, N##Y.##C, N##Z.##C)
 		DECAL_ARRAY_ITEM(IN.decal1, x),
 		DECAL_ARRAY_ITEM(IN.decal1, y),
 		DECAL_ARRAY_ITEM(IN.decal1, z),
 		DECAL_ARRAY_ITEM(IN.decal1, w)
-	#ifdef _FIXED8
+#ifdef _FIXED8
 		,
 		DECAL_ARRAY_ITEM(IN.decal2, x),
 		DECAL_ARRAY_ITEM(IN.decal2, y),
 		DECAL_ARRAY_ITEM(IN.decal2, z),
 		DECAL_ARRAY_ITEM(IN.decal2, w)
-	#endif
+#endif
 #undef DECAL_ARRAY_ITEM
 	};
 
@@ -267,28 +272,28 @@ void surf(Input IN, inout SurfaceOutputStandard o)
 		float dstAlpha = 1 - alpha1;
 		o.Alpha += alpha1;
 		o.Albedo = (albedo1 * alpha1) + (o.Albedo * dstAlpha);
-	#ifdef _NORMALMAP
+#ifdef _NORMALMAP
 		o.Normal = (normal1 * alpha1) + (o.Normal * dstAlpha);
-	#endif
+#endif
 		o.Smoothness = (smooth1 * alpha1) + (o.Smoothness * dstAlpha);
 		o.Metallic = (metal1 * alpha1) + (o.Metallic * dstAlpha);
-	#ifdef _EMISSION
+#ifdef _EMISSION
 		o.Emission = (emission1 * alpha1) + (o.Emission * dstAlpha);
-	#endif
+#endif
 	}
 
 	// For Forward, approximate blending of smoothness and metallic
 	// by tending toward 0.5
-	#if defined(UNITY_PASS_FORWARDBASE) || defined(UNITY_PASS_FORWARDADD)
+#if defined(UNITY_PASS_FORWARDBASE) || defined(UNITY_PASS_FORWARDADD)
 	o.Alpha = 1;
 	o.Smoothness = lerp(0.5, o.Smoothness, o.Alpha);
 	o.Metallic = lerp(0.5, o.Metallic, o.Alpha);
-	#endif
+#endif
 
 	o.Albedo /= o.Alpha;
-	#ifdef _NORMALMAP
+#ifdef _NORMALMAP
 	o.Normal /= o.Alpha;
-	#endif
+#endif
 	o.Smoothness /= o.Alpha;
 	o.Metallic /= o.Alpha;
 	o.Emission /= o.Alpha;
@@ -298,13 +303,11 @@ void surf(Input IN, inout SurfaceOutputStandard o)
 	float2 uv;
 	CalculateUv(IN, uv);
 
-	//OUTPUT_PARALLAX(uv);
-	//OUTPUT_ALBEDO(uv, o.Albedo, o.Alpha);
-	//OUTPUT_NORMAL(uv, o.Normal);
-	//OUTPUT_METALLIC(uv, o.Smoothness, o.Metallic);
-	//OUTPUT_EMISSION(uv, o.Emission);
-	o.Albedo = float3(uv.x, uv.y, 0);
-	o.Alpha = 1;
+	OUTPUT_PARALLAX(uv);
+	OUTPUT_ALBEDO(uv, o.Albedo, o.Alpha);
+	OUTPUT_NORMAL(uv, o.Normal);
+	OUTPUT_METALLIC(uv, o.Smoothness, o.Metallic);
+	OUTPUT_EMISSION(uv, o.Emission);
 #endif
 }
 
@@ -318,20 +321,20 @@ void SmoothnessFrag(Input IN, out half4 diffuse : SV_Target0, out half4 specSmoo
 	float alpha = 0, smoothness = 0;
 
 #ifdef _FIXEDMULTI
-	float3 decalPos[FIXED_COUNT] = { 
-	#define DECAL_ARRAY_ITEM(N, C) float3(N##X.##C, N##Y.##C, N##Z.##C)
+	float3 decalPos[FIXED_COUNT] = {
+#define DECAL_ARRAY_ITEM(N, C) float3(N##X.##C, N##Y.##C, N##Z.##C)
 		DECAL_ARRAY_ITEM(IN.decal1, x),
 		DECAL_ARRAY_ITEM(IN.decal1, y),
 		DECAL_ARRAY_ITEM(IN.decal1, z),
 		DECAL_ARRAY_ITEM(IN.decal1, w)
-	#ifdef _FIXED8
+#ifdef _FIXED8
 		,
 		DECAL_ARRAY_ITEM(IN.decal2, x),
 		DECAL_ARRAY_ITEM(IN.decal2, y),
 		DECAL_ARRAY_ITEM(IN.decal2, z),
 		DECAL_ARRAY_ITEM(IN.decal2, w)
-	#endif
-	#undef DECAL_ARRAY_ITEM
+#endif
+#undef DECAL_ARRAY_ITEM
 	};
 
 	UNROLL for (uint i = 0; i < FIXED_COUNT; i++)
