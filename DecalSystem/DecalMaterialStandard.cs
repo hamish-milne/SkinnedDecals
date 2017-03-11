@@ -94,8 +94,8 @@ namespace DecalSystem
 		{
 			if (m.IsKeywordEnabled(ScreenSpace) && rp == RenderingPath.DeferredShading)
 			{
-				if(screenSpaceDeferred != null) return screenSpaceDeferred;
-				screenSpaceDeferred = Instantiate(m);
+				if(screenSpaceDeferred == null)
+					screenSpaceDeferred = Instantiate(m);
 				screenSpaceDeferred.SetFloat("_Cull", (int)UnityEngine.Rendering.CullMode.Front);
 				return screenSpaceDeferred;
 			}

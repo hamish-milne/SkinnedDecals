@@ -40,7 +40,8 @@
 struct Input
 {
 #ifdef _POM
-	float4 pomData : TEXCOORD0;
+	//float4 pomData : TEXCOORD0;
+	float3 viewDir : TEXCOORD0;
 #elif defined(_PARALLAXMAP)
 	float3 viewDirForParallax : TEXCOORD0;
 #endif
@@ -195,7 +196,7 @@ void vert(inout appdata_full v, out Input o)
 #endif
 
 #ifdef _POM
-	parallax_vert(v.vertex, v.normal, v.tangent, o.pomData.xyz, o.pomData.w);
+	//parallax_vert(v.vertex, v.normal, v.tangent, o.pomData.xyz, o.pomData.w);
 #elif defined(_PARALLAXMAP)
 	TANGENT_SPACE_ROTATION;
 	o.viewDirForParallax = mul(rotation, ObjSpaceViewDir(v.vertex));
@@ -203,7 +204,7 @@ void vert(inout appdata_full v, out Input o)
 }
 
 #ifdef _POM
-#define OUTPUT_PARALLAX(UV) { UV.xy += parallax_offset(_Parallax, IN.pomData.xyz, IN.pomData.w, UV, _ParallaxMap, 4, 30); }
+#define OUTPUT_PARALLAX(UV) { UV.xy += parallax_offset(_Parallax, IN.viewDir, 1, UV, _ParallaxMap, 4, 30); }
 #elif defined(_PARALLAXMAP)
 #define OUTPUT_PARALLAX(UV) { UV.xy += ParallaxOffset(tex2D(_ParallaxMap, UV).g, lerp(0.005, 0.08, _Parallax), IN.viewDirForParallax); }
 #else
@@ -248,6 +249,9 @@ void CalculateUv(Input IN, inout float2 uv)
 #elif !defined(_FIXEDMULTI)
 	if (any(IN.decalPos != saturate(IN.decalPos))) discard;
 	uv = IN.decalPos.xy;
+#endif
+#if defined(_FIXEDSINGLE) || defined(_SCREENSPACE)
+	uv = float2(1, 1) - uv;
 #endif
 }
 

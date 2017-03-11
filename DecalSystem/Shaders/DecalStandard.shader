@@ -17,6 +17,8 @@
 
 		[HDR] _EmissionColor("Emission color", Color) = (0,0,0)
 		_EmissionMap("Emission map", 2D) = "white" {}
+
+		_Cull("Cull", Float) = 2
 	}
 
 	Category
@@ -47,7 +49,7 @@
 			}
 
 			CGPROGRAM
-			//#pragma enable_d3d11_debug_symbols
+			#pragma enable_d3d11_debug_symbols
 			#pragma target 4.0
 			// For some reason Metal reports as SM4, when it really isn't
 			// Might as well exclude it rather than wasting time trying to compile. If Metal gets better try commenting this out.

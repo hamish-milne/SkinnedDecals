@@ -6,10 +6,10 @@ Material:
   m_ObjectHideFlags: 0
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
-  m_Name: Test POM 1
+  m_Name: Test POMDefault
   m_Shader: {fileID: 4800000, guid: 750aca623e2b86247859ddf14816223f, type: 3}
-  m_ShaderKeywords: _EMISSION _NORMALMAP _PARALLAXMAP _POM
-  m_LightmapFlags: 1
+  m_ShaderKeywords: _POM
+  m_LightmapFlags: 5
   m_CustomRenderQueue: -1
   stringTagMap: {}
   m_SavedProperties:
@@ -19,24 +19,6 @@ Material:
         name: _BumpMap
       second:
         m_Texture: {fileID: 2800000, guid: 1c3aeef52b95ee24facbc5aa3d07c081, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - first:
-        name: _DetailAlbedoMap
-      second:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - first:
-        name: _DetailMask
-      second:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - first:
-        name: _DetailNormalMap
-      second:
-        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - first:
@@ -58,12 +40,6 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - first:
-        name: _OcclusionMap
-      second:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - first:
         name: _ParallaxMap
       second:
         m_Texture: {fileID: 2800000, guid: 84c11a0db80f6144eb14445bba21229e, type: 3}
@@ -78,13 +54,13 @@ Material:
       second: 2
     - first:
         name: _Glossiness
-      second: 0.5
+      second: 0
     - first:
         name: _Metallic
       second: 0
     - first:
         name: _Parallax
-      second: 0.2
+      second: 0.18
     m_Colors:
     - first:
         name: _Color
