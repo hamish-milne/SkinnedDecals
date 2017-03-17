@@ -112,6 +112,7 @@ namespace DecalSystem
 					mode = Fixed8;
 				mat = DecalMaterial?.GetMaterial(mode);
 				block.Clear();
+				Debug.Log(Instances[0].matrix.inverse);
 				if (mode == FixedSingle)
 					block.SetMatrix(ProjectorSingle, Instances[0].matrix.inverse);
 				else

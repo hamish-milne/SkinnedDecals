@@ -54,7 +54,7 @@
 			// For some reason Metal reports as SM4, when it really isn't
 			// Might as well exclude it rather than wasting time trying to compile. If Metal gets better try commenting this out.
 			#pragma exclude_renderers metal
-			#pragma multi_compile _ _POM _PARALLAXMAP _NORMALMAP // Parallax takes priority - needs to be first
+			#pragma multi_compile _ _PARALLAXMAP _NORMALMAP // Parallax takes priority - needs to be first
 			#pragma multi_compile _ _METALLICGLOSSMAP
 			#pragma multi_compile _ _EMISSION
 			#pragma multi_compile _ _SCREENSPACE _FIXEDSINGLE _FIXED4 _SKINNEDUV _FIXED8 _SKINNEDBUFFER

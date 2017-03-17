@@ -11,8 +11,7 @@
 #define FIXED_COUNT (8)
 #endif
 
-#ifdef _POM
-#define _PARALLAXMAP
+#ifdef _PARALLAXMAP
 #include "ParallaxOcclusion.cginc"
 #endif
 
@@ -39,11 +38,8 @@
 
 struct Input
 {
-#ifdef _POM
-	//float4 pomData : TEXCOORD0;
-	float3 viewDir : TEXCOORD0;
-#elif defined(_PARALLAXMAP)
-	float3 viewDirForParallax : TEXCOORD0;
+#ifdef _PARALLAXMAP
+	float4 viewDirForParallax : TEXCOORD0;
 #endif
 #ifdef _SCREENSPACE
 	float4 screen : TEXCOORD1;
@@ -195,18 +191,34 @@ void vert(inout appdata_full v, out Input o)
 		v.vertex = float4(0, 0, 0, 0);
 #endif
 
-#ifdef _POM
-	//parallax_vert(v.vertex, v.normal, v.tangent, o.pomData.xyz, o.pomData.w);
-#elif defined(_PARALLAXMAP)
-	TANGENT_SPACE_ROTATION;
-	o.viewDirForParallax = mul(rotation, ObjSpaceViewDir(v.vertex));
+#ifdef _PARALLAXMAP
+	float4 pos = v.vertex;
+	float3 normal = v.normal;
+	float4 tangent = v.tangent;
+	float3 objSpaceCameraPos = mul(unity_WorldToObject, float4(_WorldSpaceCameraPos.xyz, 1)).xyz;
+
+	// For POM, UV space needs to match tangent space
+	// In screen space, this is assured due to the geometry we're drawing
+	// but for an arbitrary matrix, we need to manually bring it into decal space
+	#ifdef _FIXEDSINGLE 
+		tangent = float4(-1, 0, 0, -1);
+		objSpaceCameraPos = mul(_PrSingle, float4(objSpaceCameraPos, 1)).xyz;
+		pos = mul(_PrSingle, pos);
+	#endif
+	float3 objSpaceViewDir = objSpaceCameraPos - pos.xyz;
+
+	// Get tangent-space rotation matrix
+	float3 binormal = cross(normalize(normal), normalize(tangent.xyz)) * tangent.w;
+	float3x3 rotation = float3x3(tangent.xyz, binormal, normal);
+
+	float sampleRatio = dot(normalize(objSpaceViewDir), normal) + 1;
+	o.viewDirForParallax = float4(mul(rotation, objSpaceViewDir), sampleRatio);
+
 #endif
 }
 
-#ifdef _POM
-#define OUTPUT_PARALLAX(UV) { UV.xy += parallax_offset(_Parallax, IN.viewDir, 1, UV, _ParallaxMap, 4, 30); }
-#elif defined(_PARALLAXMAP)
-#define OUTPUT_PARALLAX(UV) { UV.xy += ParallaxOffset(tex2D(_ParallaxMap, UV).g, lerp(0.005, 0.08, _Parallax), IN.viewDirForParallax); }
+#ifdef _PARALLAXMAP
+#define OUTPUT_PARALLAX(UV) { UV.xy += parallax_offset(_Parallax, IN.viewDirForParallax.xyz, IN.viewDirForParallax.w, UV, _ParallaxMap, 4, 30); }
 #else
 #define OUTPUT_PARALLAX(UV)
 #endif
