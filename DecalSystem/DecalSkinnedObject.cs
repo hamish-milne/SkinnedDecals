@@ -51,6 +51,7 @@ namespace DecalSystem
 		{
 			[NonSerialized] public DecalSkinnedObject obj;
 
+			[HideInInspector] public Matrix4x4 initialMatrix = Matrix4x4.identity;
 			[HideInInspector] public int uvDataStart;
 			[HideInInspector] public Vector2[] uvData;
 			public SkinnedChannel channel;
@@ -89,12 +90,15 @@ namespace DecalSystem
 				}
 			}
 
-			public SkinnedInstance(DecalSkinnedObject obj, DecalMaterial decalMaterial, Vector2[] uvData, int uvDataStart)
+			public SkinnedInstance() { }
+
+			public SkinnedInstance(DecalSkinnedObject obj, DecalMaterial decalMaterial, Vector2[] uvData, int uvDataStart, Matrix4x4 initialMatrix)
 			{
 				this.obj = obj;
 				this.decalMaterial = decalMaterial;
 				this.uvData = uvData;
 				this.uvDataStart = uvDataStart;
+				this.initialMatrix = initialMatrix;
 			}
 		}
 
@@ -128,6 +132,7 @@ namespace DecalSystem
 			protected readonly Vector2[] uvData;
 
 			public List<SkinnedInstance> Instances { get; } = new List<SkinnedInstance>();
+			protected readonly MaterialPropertyBlock materialPropertyBlock = new MaterialPropertyBlock();
 
 			public bool Add(SkinnedInstance instance, bool force = false)
 			{
@@ -206,11 +211,16 @@ namespace DecalSystem
 				if (buffer == null)
 					buffer = new ComputeBuffer(uvData.Length, sizeof(float) * 2);
 				buffer.SetData(uvData);
+				if(Instances.Count == 1)
+					materialPropertyBlock.SetMatrix(ProjectorSingle, Instances[0].initialMatrix.inverse);
 			}
 
-			public virtual void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
+			public virtual void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer,
+				ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock,
+				ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
 			{
 				if (DecalMaterial == null) return;
+				propertyBlock = materialPropertyBlock;
 				if (dcam.CanDrawRenderers(DecalMaterial))
 				{
 					renderer = obj.SkinnedRenderer;
@@ -224,8 +234,6 @@ namespace DecalSystem
 					mesh = obj.GetCurrentMesh();
 					matrix = obj.transform.localToWorldMatrix;
 					material = DecalMaterial.GetMaterial(SkinnedBuffer);
-					propertyBlock = new MaterialPropertyBlock();
-					propertyBlock.SetBuffer(ShaderKeywords.Buffer, buffer);
 					obj.doClearChannels = true;
 				}
 			}
@@ -292,6 +300,11 @@ namespace DecalSystem
 					material = DecalMaterial.GetMaterial(SkinnedUv, ShaderKeywords.UvChannel, id);
 				if (!mats.Contains(material))
 					decalRenderer.sharedMaterials = mats.Where(m => m != null).Concat(new[] {material}).ToArray();
+				if (Instances.Count == 1)
+				{
+					materialPropertyBlock.SetMatrix(ProjectorSingle, Instances[0].initialMatrix.inverse);
+					decalRenderer.SetPropertyBlock(materialPropertyBlock);
+				}
 			}
 
 			private static readonly HashSet<Pair<SkinnedMeshRenderer, UvChannel>> usedChannels
@@ -460,7 +473,7 @@ namespace DecalSystem
 				newUvBuffer[i - start] = uvBuffer[i];
 
 			
-			var inst = new SkinnedInstance(this, decal, newUvBuffer, start);
+			var inst = new SkinnedInstance(this, decal, newUvBuffer, start, transform.worldToLocalMatrix * projector.localToWorldMatrix);
 			AddInstance(inst);
 			instances.Add(inst);
 			Profiler.EndSample();

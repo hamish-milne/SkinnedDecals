@@ -112,7 +112,6 @@ namespace DecalSystem
 					mode = Fixed8;
 				mat = DecalMaterial?.GetMaterial(mode);
 				block.Clear();
-				Debug.Log(Instances[0].matrix.inverse);
 				if (mode == FixedSingle)
 					block.SetMatrix(ProjectorSingle, Instances[0].matrix.inverse);
 				else
@@ -145,7 +144,8 @@ namespace DecalSystem
 				// ReSharper disable once LoopCanBeConvertedToQuery
 				foreach (var g in drawGroups)
 				{
-					if (g.Submesh != o.submesh ||
+					if (!g.DecalMaterial.AllowMerge() ||
+						g.Submesh != o.submesh ||
 						g.DecalMaterial != o.DecalMaterial ||
 						g.Instances.Count >= FixedDraw.MaxInstances)
 						continue;

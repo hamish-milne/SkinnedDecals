@@ -371,5 +371,11 @@ namespace DecalSystem
 		/// <param name="mat"></param>
 		/// <returns></returns>
 		public abstract bool RequiresDepthTexture(Material mat);
+
+		/// <summary>
+		/// Check whether we can merge multiple instances of this decal into a single draw call
+		/// </summary>
+		/// <returns></returns>
+		public abstract bool AllowMerge();
 	}
 }

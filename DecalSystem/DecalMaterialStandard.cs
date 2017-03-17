@@ -118,5 +118,10 @@ namespace DecalSystem
 		{
 			return mat?.IsKeywordEnabled(ScreenSpace) ?? false;
 		}
+
+		public override bool AllowMerge()
+		{
+			return parallaxMap == null;
+		}
 	}
 }

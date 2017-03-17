@@ -82,19 +82,29 @@ uniform float4 _Color;
 uniform sampler2D _MainTex;
 
 #ifdef _SKINNEDBUFFER
+#define SINGLE_MATRIX
 uniform Buffer<float2> _Buffer;
 
 #elif defined(_SKINNEDUV)
+#define SINGLE_MATRIX
 uniform uint _UvChannel;
 
 #elif defined(_FIXEDMULTI)
 uniform float4x4 _PrMulti[FIXED_COUNT];
 
 #elif defined(_FIXEDSINGLE)
-uniform float4x4 _PrSingle;
+#define SINGLE_MATRIX
 
 #elif defined(_SCREENSPACE)
 uniform sampler2D_float _CameraDepthTexture;
+
+#else // Default
+#define SINGLE_MATRIX
+
+#endif
+
+#ifdef SINGLE_MATRIX
+uniform float4x4 _PrSingle;
 #endif
 
 #ifdef _NORMALMAP
@@ -200,7 +210,7 @@ void vert(inout appdata_full v, out Input o)
 	// For POM, UV space needs to match tangent space
 	// In screen space, this is assured due to the geometry we're drawing
 	// but for an arbitrary matrix, we need to manually bring it into decal space
-	#ifdef _FIXEDSINGLE 
+	#ifdef SINGLE_MATRIX
 		tangent = float4(-1, 0, 0, -1);
 		objSpaceCameraPos = mul(_PrSingle, float4(objSpaceCameraPos, 1)).xyz;
 		pos = mul(_PrSingle, pos);
