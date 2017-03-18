@@ -215,8 +215,8 @@ void vert(inout appdata_full v, out Input o)
 		//tangent = float4(-1, 0, 0, -1);
 		//objSpaceCameraPos = mul(_PrSingle, float4(objSpaceCameraPos, 1)).xyz;
 		//pos = mul(_PrSingle, pos);
-		tangent = _PrSingle[0] * -1 * unity_WorldTransformParams.w;
-		binormal = _PrSingle[1] * -1 * unity_WorldTransformParams.w;
+		tangent.xyz = normalize((float3)_PrSingle[0]);
+		binormal    = normalize((float3)_PrSingle[1]);
 	#else
 		binormal = cross(normalize(normal), normalize(tangent.xyz)) * tangent.w * unity_WorldTransformParams.w;
 	#endif
@@ -276,7 +276,7 @@ void CalculateUv(Input IN, inout float2 uv)
 	if (any(IN.decalPos != saturate(IN.decalPos))) discard;
 	uv = IN.decalPos.xy;
 #endif
-#if defined(_FIXEDSINGLE) || defined(_SCREENSPACE)
+#if defined(_SCREENSPACE)
 	uv = float2(1, 1) - uv;
 #endif
 }

@@ -114,7 +114,7 @@ namespace DecalSystem
 
 			public void AddShaderProperties(IShaderProperties shaderProperties)
 			{
-				if(matrixList.Count == 0)
+				if(matrixList.Count == 1)
 					shaderProperties.Add(ProjectorSingle, matrixList[0]);
 				else
 					shaderProperties.Add(ProjectorMulti, matrixList);
