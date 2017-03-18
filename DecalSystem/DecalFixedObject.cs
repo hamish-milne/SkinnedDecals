@@ -84,19 +84,16 @@ namespace DecalSystem
 
 			public List<FixedInstance> Instances { get; } = new List<FixedInstance>();
 			public DecalObject DecalObject { get; }
-
-			private readonly MaterialPropertyBlock block = new MaterialPropertyBlock();
+			
 			private Material mat;
 			private readonly List<Matrix4x4> matrixList = new List<Matrix4x4>();
 
 			public void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer,
-				ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock,
-				ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
+				ref int submesh, ref Material material, ref Matrix4x4 matrix)
 			{
 				mesh = DecalObject.Mesh;
 				submesh = Submesh;
 				material = mat;
-				propertyBlock = block;
 				matrix = DecalObject.transform.localToWorldMatrix;
 			}
 
@@ -111,16 +108,16 @@ namespace DecalSystem
 				if (Instances.Count > 4)
 					mode = Fixed8;
 				mat = DecalMaterial?.GetMaterial(mode);
-				block.Clear();
-				if (mode == FixedSingle)
-					block.SetMatrix(ProjectorSingle, Instances[0].matrix.inverse);
+				foreach(var o in Instances)
+					matrixList.Add(o.matrix.inverse);
+			}
+
+			public void AddShaderProperties(IShaderProperties shaderProperties)
+			{
+				if(matrixList.Count == 0)
+					shaderProperties.Add(ProjectorSingle, matrixList[0]);
 				else
-				{
-					matrixList.Clear();
-					foreach(var o in Instances)
-						matrixList.Add(o.matrix.inverse);
-					block.SetMatrixArray(ProjectorMulti, matrixList);
-				}
+					shaderProperties.Add(ProjectorMulti, matrixList);
 			}
 
 			public FixedDraw(DecalObject obj)

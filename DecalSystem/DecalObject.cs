@@ -37,17 +37,15 @@ namespace DecalSystem
 		/// <param name="renderer">A <c>Renderer</c> to be drawn. Defaults to <c>null</c></param>
 		/// <param name="submesh">The submesh index to draw. Defaults to 0</param>
 		/// <param name="material">The material to be used for the draw. Cannot be <c>null</c></param>
-		/// <param name="propertyBlock">A property block that can provide extra material properties. Defaults to <c>null</c></param>
 		/// <param name="matrix">The locak to world matrix of the mesh or renderer. Defaults to <c>Matrix4x4.identity</c></param>
-		/// <param name="buffers">Because <c>MaterialPropertyBlock</c> does not support setting <c>ComputeBuffer</c>
-		/// properties for <c>CommandBuffer</c> commands, to properly set them they must be added here.</param>
 		/// <remarks>
 		/// This will be called once for each camera where the object is in view.
 		/// <c>Mesh</c> and <c>Renderer</c> cannot both be set to non-null values.
  		/// </remarks>
 		void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer,
-			ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock,
-			ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers);
+			ref int submesh, ref Material material, ref Matrix4x4 matrix);
+
+		void AddShaderProperties(IShaderProperties properties);
 	}
 	
 	/// <summary>
@@ -126,12 +124,13 @@ namespace DecalSystem
 		/// </summary>
 		/// <inheritdoc />
 		public virtual void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer,
-			ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock,
-			ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
+			ref int submesh, ref Material material, ref Matrix4x4 matrix)
 		{
 			matrix = DefaultMatrix();
 			material = DecalMaterial?.GetMaterial(ModeString);
 		}
+
+		public abstract void AddShaderProperties(IShaderProperties properties);
 	}
 
 	/// <summary>

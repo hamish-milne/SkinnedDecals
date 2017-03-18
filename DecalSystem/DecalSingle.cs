@@ -83,10 +83,17 @@ namespace DecalSystem
 				set { obj.decalMaterial = value; }
 			}
 
-			public override void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer, ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock, ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
+			public override void GetDrawCommand(DecalCamera dcam,
+				ref Mesh mesh, ref Renderer renderer, ref int submesh,
+				ref Material material, ref Matrix4x4 matrix)
 			{
-				base.GetDrawCommand(dcam, ref mesh, ref renderer, ref submesh, ref material, ref propertyBlock, ref matrix, buffers);
+				base.GetDrawCommand(dcam, ref mesh, ref renderer, ref submesh, ref material, ref matrix);
 				mesh = DecalScreenSpaceObject.CubeMesh;
+			}
+
+			public override void AddShaderProperties(IShaderProperties properties)
+			{
+				// None
 			}
 
 			public override bool Enabled

@@ -164,9 +164,6 @@ namespace DecalSystem
 				toRender.Add(obj);
 		}
 
-		// Static list for when we pass setBuffers into the decal draws
-		private readonly List<KeyValuePair<string, ComputeBuffer>> setBuffers = new List<KeyValuePair<string, ComputeBuffer>>();
-
 		/// <summary>
 		/// Checks whether we can draw Renderers (not just Meshes) directly with the given material
 		/// </summary>
@@ -183,6 +180,25 @@ namespace DecalSystem
 		// Static plane array to avoid allocations
 		private readonly Plane[] cameraPlanes = new Plane[6];
 
+		private readonly PropertyBlockWrapper propertyBlockWrapper = new PropertyBlockWrapper();
+		private readonly CommandBufferWrapper commandBufferWrapper = new CommandBufferWrapper();
+
+		private int blockIdx;
+		private readonly List<MaterialPropertyBlock> blockCache = new List<MaterialPropertyBlock>();
+
+		protected void ResetBlockCache()
+		{
+			blockIdx = 0;
+		}
+
+		protected MaterialPropertyBlock GetPropertyBlock()
+		{
+			return new MaterialPropertyBlock();
+			while(blockCache.Count <= blockIdx)
+				blockCache.Add(new MaterialPropertyBlock());
+			return blockCache[blockIdx++];
+		}
+
 		/// <summary>
 		/// Draws decals for this camera
 		/// </summary>
@@ -194,6 +210,7 @@ namespace DecalSystem
 			bool requireDepth = false;
 			var activeObjects = DecalObject.ActiveObjects;
 			var cameraPlanesCalculated = false;
+			ResetBlockCache();
 			// ReSharper disable once ForCanBeConvertedToForeach
 			for (int j = 0; j < activeObjects.Count; j++)
 			{
@@ -225,10 +242,8 @@ namespace DecalSystem
 						Renderer rend = null;
 						int submesh = 0;
 						Material material = null;
-						MaterialPropertyBlock block = null;
 						var matrix = Matrix4x4.identity;
-						setBuffers.Clear();
-						draw.GetDrawCommand(this, ref mesh, ref rend, ref submesh, ref material, ref block, ref matrix, setBuffers);
+						draw.GetDrawCommand(this, ref mesh, ref rend, ref submesh, ref material, ref matrix);
 
 						// Skip invalid commands
 						if (material == null || (rend == null && mesh == null)) continue;
@@ -239,28 +254,40 @@ namespace DecalSystem
 						useCommandBuffer |= mesh != null && !CanUseDrawMesh(rp, draw.DecalMaterial, material);
 						var thisRequiresDepth = draw.DecalMaterial.RequiresDepthTexture(material);
 						requireDepth |= thisRequiresDepth;
-
+						
 						if (useCommandBuffer)
 						{
 							var cmd = thisRequiresDepth ? cDepthTexture : cDepthZtest;
 							var passes = draw.DecalMaterial?.GetKnownPasses(rp);
 							if (passes == null)
 								throw new Exception($"Unable to determine pass order for decal with {draw}");
-							foreach (var pair in setBuffers)
-								cmd.SetGlobalBuffer(pair.Key, pair.Value);
+
 							if (rend != null)
 							{
+								//commandBufferWrapper.CmdBuf = cmd;
+								//draw.AddShaderProperties(commandBufferWrapper);
+
 								foreach (var pass in passes)
 									cmd.DrawRenderer(rend, material, submesh, pass);
 							}
 							else
 							{
+								var block = GetPropertyBlock();
+								propertyBlockWrapper.PropertyBlock = block;
+								propertyBlockWrapper.CmdBuf = cmd;
+								draw.AddShaderProperties(propertyBlockWrapper);
+
 								foreach (var pass in passes)
 									cmd.DrawMesh(mesh, matrix, material, submesh, pass, block);
 							}
 						}
 						else if (mesh != null)
 						{
+							var block = GetPropertyBlock();
+							propertyBlockWrapper.PropertyBlock = block;
+							propertyBlockWrapper.CmdBuf = null;
+							draw.AddShaderProperties(propertyBlockWrapper);
+
 							Graphics.DrawMesh(mesh, matrix, material, 0, //Default layer
 								Camera, submesh, block, false, true);
 						}

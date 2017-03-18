@@ -205,20 +205,24 @@ void vert(inout appdata_full v, out Input o)
 	float4 pos = v.vertex;
 	float3 normal = v.normal;
 	float4 tangent = v.tangent;
+	float3 binormal;
 	float3 objSpaceCameraPos = mul(unity_WorldToObject, float4(_WorldSpaceCameraPos.xyz, 1)).xyz;
 
 	// For POM, UV space needs to match tangent space
 	// In screen space, this is assured due to the geometry we're drawing
 	// but for an arbitrary matrix, we need to manually bring it into decal space
 	#ifdef SINGLE_MATRIX
-		tangent = float4(-1, 0, 0, -1);
-		objSpaceCameraPos = mul(_PrSingle, float4(objSpaceCameraPos, 1)).xyz;
-		pos = mul(_PrSingle, pos);
+		//tangent = float4(-1, 0, 0, -1);
+		//objSpaceCameraPos = mul(_PrSingle, float4(objSpaceCameraPos, 1)).xyz;
+		//pos = mul(_PrSingle, pos);
+		tangent = _PrSingle[0] * -1 * unity_WorldTransformParams.w;
+		binormal = _PrSingle[1] * -1 * unity_WorldTransformParams.w;
+	#else
+		binormal = cross(normalize(normal), normalize(tangent.xyz)) * tangent.w * unity_WorldTransformParams.w;
 	#endif
 	float3 objSpaceViewDir = objSpaceCameraPos - pos.xyz;
 
 	// Get tangent-space rotation matrix
-	float3 binormal = cross(normalize(normal), normalize(tangent.xyz)) * tangent.w;
 	float3x3 rotation = float3x3(tangent.xyz, binormal, normal);
 
 	float sampleRatio = dot(normalize(objSpaceViewDir), normal) + 1;

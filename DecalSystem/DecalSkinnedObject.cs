@@ -51,7 +51,7 @@ namespace DecalSystem
 		{
 			[NonSerialized] public DecalSkinnedObject obj;
 
-			[HideInInspector] public Matrix4x4 initialMatrix = Matrix4x4.identity;
+			public Matrix4x4 initialMatrix = Matrix4x4.identity;
 			[HideInInspector] public int uvDataStart;
 			[HideInInspector] public Vector2[] uvData;
 			public SkinnedChannel channel;
@@ -132,7 +132,6 @@ namespace DecalSystem
 			protected readonly Vector2[] uvData;
 
 			public List<SkinnedInstance> Instances { get; } = new List<SkinnedInstance>();
-			protected readonly MaterialPropertyBlock materialPropertyBlock = new MaterialPropertyBlock();
 
 			public bool Add(SkinnedInstance instance, bool force = false)
 			{
@@ -203,6 +202,7 @@ namespace DecalSystem
 		protected class SkinnedBufferChannel : SkinnedChannel, IDecalDraw
 		{
 			private ComputeBuffer buffer;
+			private Matrix4x4 singleMatrix;
 
 			public bool Enabled => Instances.Count > 0;
 
@@ -212,30 +212,33 @@ namespace DecalSystem
 					buffer = new ComputeBuffer(uvData.Length, sizeof(float) * 2);
 				buffer.SetData(uvData);
 				if(Instances.Count == 1)
-					materialPropertyBlock.SetMatrix(ProjectorSingle, Instances[0].initialMatrix.inverse);
+					singleMatrix = Instances[0].initialMatrix.inverse;
 			}
 
 			public virtual void GetDrawCommand(DecalCamera dcam, ref Mesh mesh, ref Renderer renderer,
-				ref int submesh, ref Material material, ref MaterialPropertyBlock propertyBlock,
-				ref Matrix4x4 matrix, List<KeyValuePair<string, ComputeBuffer>> buffers)
+				ref int submesh, ref Material material, ref Matrix4x4 matrix)
 			{
 				if (DecalMaterial == null) return;
-				propertyBlock = materialPropertyBlock;
-				if (dcam.CanDrawRenderers(DecalMaterial))
+				/*if (dcam.CanDrawRenderers(DecalMaterial))
 				{
 					renderer = obj.SkinnedRenderer;
 					material = DecalMaterial.GetMaterial(SkinnedBuffer);
-					buffers.Add(new KeyValuePair<string, ComputeBuffer>(ShaderKeywords.Buffer, buffer));
 				}
 				else
-				{
+				{*/
 					// Need to manually bake mesh - not efficient. Revert to UV method
 					// This happens when a camera starts using the forward path
 					mesh = obj.GetCurrentMesh();
 					matrix = obj.transform.localToWorldMatrix;
 					material = DecalMaterial.GetMaterial(SkinnedBuffer);
-					obj.doClearChannels = true;
-				}
+					//obj.doClearChannels = true;
+				//}
+			}
+
+			public virtual void AddShaderProperties(IShaderProperties properties)
+			{
+				properties.Add(ShaderKeywords.Buffer, buffer);
+				properties.Add(ProjectorSingle, singleMatrix);
 			}
 
 			public SkinnedBufferChannel(DecalSkinnedObject obj) : base(obj) { }
@@ -267,6 +270,7 @@ namespace DecalSystem
 			private readonly Mesh decalMesh;
 			private static readonly List<Vector4> uvList = new List<Vector4>();
 			private Material material;
+			private readonly MaterialPropertyBlock materialPropertyBlock = new MaterialPropertyBlock();
 
 			public override void Update()
 			{

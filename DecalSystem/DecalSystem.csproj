@@ -43,6 +43,7 @@
     <Compile Include="DecalScreenSpaceObject.cs" />
     <Compile Include="DecalSingle.cs" />
     <Compile Include="DecalSkinnedObject.cs" />
+    <Compile Include="IShaderProperties.cs" />
     <Compile Include="ProjectionUtility.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ShaderKeywords.cs" />
