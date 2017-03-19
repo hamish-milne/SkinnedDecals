@@ -219,26 +219,26 @@ namespace DecalSystem
 				ref int submesh, ref Material material, ref Matrix4x4 matrix)
 			{
 				if (DecalMaterial == null) return;
-				/*if (dcam.CanDrawRenderers(DecalMaterial))
+				if (dcam.CanDrawRenderers(DecalMaterial))
 				{
 					renderer = obj.SkinnedRenderer;
 					material = DecalMaterial.GetMaterial(SkinnedBuffer);
 				}
 				else
-				{*/
+				{
 					// Need to manually bake mesh - not efficient. Revert to UV method
 					// This happens when a camera starts using the forward path
 					mesh = obj.GetCurrentMesh();
 					matrix = obj.transform.localToWorldMatrix;
 					material = DecalMaterial.GetMaterial(SkinnedBuffer);
-					//obj.doClearChannels = true;
-				//}
+					obj.doClearChannels = true;
+				}
 			}
 
 			public virtual void AddShaderProperties(IShaderProperties properties)
 			{
 				properties.Add(ShaderKeywords.Buffer, buffer);
-				properties.Add(ProjectorSingle, singleMatrix);
+				properties.Add(BDecalMatrix, singleMatrix); // Use a different property name when drawing a renderer
 			}
 
 			public SkinnedBufferChannel(DecalSkinnedObject obj) : base(obj) { }
@@ -307,6 +307,8 @@ namespace DecalSystem
 				if (Instances.Count == 1)
 				{
 					materialPropertyBlock.SetMatrix(ProjectorSingle, Instances[0].initialMatrix.inverse);
+					materialPropertyBlock.SetMatrix(RealObjectToWorld, decalRenderer.localToWorldMatrix);
+					materialPropertyBlock.SetMatrix(RealWorldToObject, decalRenderer.worldToLocalMatrix);
 					decalRenderer.SetPropertyBlock(materialPropertyBlock);
 				}
 			}

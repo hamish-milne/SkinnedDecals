@@ -10,7 +10,12 @@ namespace DecalSystem
 		void Add<T>(string name, T value);
 	}
 
-	public class CommandBufferWrapper : IShaderProperties
+	public class ShaderPropertiesBase
+	{
+		protected static readonly HashSet<string> globalPropertyNames = new HashSet<string>();
+	}
+
+	public class CommandBufferWrapper : ShaderPropertiesBase, IShaderProperties
 	{
 		private static readonly Dictionary<Type, string> methodNames
 		= new Dictionary<Type, string>
@@ -37,9 +42,8 @@ namespace DecalSystem
 
 			static MethodRef()
 			{
-				string methodName;
-				if(methodNames.TryGetValue(typeof(T), out methodName))
-					Method = (SetMethod) Delegate.CreateDelegate(typeof(SetMethod),
+				if (methodNames.TryGetValue(typeof(T), out string methodName))
+					Method = (SetMethod)Delegate.CreateDelegate(typeof(SetMethod),
 						typeof(CommandBuffer).GetMethod(methodName, arguments));
 			}
 		}
@@ -48,13 +52,15 @@ namespace DecalSystem
 
 		public void Add<T>(string name, T value)
 		{
+			if(string.IsNullOrEmpty(name)) throw new ArgumentNullException(name);
 			if(MethodRef<T>.Method == null)
 				throw new Exception("Unsupported property type: " + typeof(T));
+			globalPropertyNames.Add(name);
 			MethodRef<T>.Method(CmdBuf, name, value);
 		}
 	}
 
-	public class PropertyBlockWrapper : IShaderProperties
+	public class PropertyBlockWrapper : ShaderPropertiesBase, IShaderProperties
 	{
 		private static readonly Dictionary<Type, string> methodNames
 		= new Dictionary<Type, string>
@@ -81,8 +87,7 @@ namespace DecalSystem
 
 			static MethodRef()
 			{
-				string methodName;
-				if (methodNames.TryGetValue(typeof(T), out methodName))
+				if (methodNames.TryGetValue(typeof(T), out string methodName))
 					Method = (SetMethod)Delegate.CreateDelegate(typeof(SetMethod),
 						typeof(MaterialPropertyBlock).GetMethod(methodName, arguments));
 			}
@@ -93,14 +98,22 @@ namespace DecalSystem
 
 		public void Add<T>(string name, T value)
 		{
+			if (string.IsNullOrEmpty(name)) throw new ArgumentNullException(name);
 			if (MethodRef<T>.Method == null)
 				throw new Exception("Unsupported property type: " + typeof(T));
 
 			// Workaround for SetBuffer not working for command buffers (what?)
-			if (CmdBuf != null && typeof(T) == typeof(ComputeBuffer)) 
+			if (CmdBuf != null && (typeof(T) == typeof(ComputeBuffer) || globalPropertyNames.Contains(name)))
+			{
+				globalPropertyNames.Add(name);
 				CmdBuf.SetGlobalBuffer(name, (ComputeBuffer) (object) value);
+			}
 			else
+			{
+				if(globalPropertyNames.Contains(name))
+					Debug.LogWarning("The shader property " + name + " is being set globally, and will be overridden");
 				MethodRef<T>.Method(PropertyBlock, name, value);
+			}
 		}
 	}
 }

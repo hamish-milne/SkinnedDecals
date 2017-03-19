@@ -13,6 +13,7 @@ namespace DecalSystem.Editor
 	{
 		private PropertyInfo propInfo;
 		private object obj;
+		private string forPath;
 
 		private static readonly Dictionary<Type, Func<Rect, GUIContent, object, Type, object>> guiMethods =
 			new Dictionary<Type, Func<Rect, GUIContent, object, Type, object>>
@@ -30,7 +31,7 @@ namespace DecalSystem.Editor
 		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
 		{
 			var target = property.serializedObject.targetObject;
-			if (propInfo == null)
+			if (propInfo == null || forPath != property.propertyPath)
 			{
 				propInfo =
 					// ReSharper disable once PossibleNullReferenceException
@@ -54,6 +55,7 @@ namespace DecalSystem.Editor
 				{
 					obj = target;
 				}
+				forPath = property.propertyPath;
 			}
 			if (propInfo == null)
 			{

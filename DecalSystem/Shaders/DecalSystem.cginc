@@ -82,29 +82,35 @@ uniform float4 _Color;
 uniform sampler2D _MainTex;
 
 #ifdef _SKINNEDBUFFER
-#define SINGLE_MATRIX
+#define M_PARALLAX _BDecalMatrix
+#define M_TRANSFORM
 uniform Buffer<float2> _Buffer;
 
 #elif defined(_SKINNEDUV)
-#define SINGLE_MATRIX
+#define M_PARALLAX _PrSingle
+#define M_TRANSFORM
 uniform uint _UvChannel;
 
 #elif defined(_FIXEDMULTI)
 uniform float4x4 _PrMulti[FIXED_COUNT];
 
 #elif defined(_FIXEDSINGLE)
-#define SINGLE_MATRIX
+#define M_PARALLAX _PrSingle
 
 #elif defined(_SCREENSPACE)
 uniform sampler2D_float _CameraDepthTexture;
 
 #else // Default
-#define SINGLE_MATRIX
 
 #endif
 
-#ifdef SINGLE_MATRIX
-uniform float4x4 _PrSingle;
+#ifdef M_PARALLAX
+uniform float4x4 M_PARALLAX;
+#endif
+
+#ifdef M_TRANSFORM
+uniform float4x4 real_ObjectToWorld;
+uniform float4x4 real_WorldToObject;
 #endif
 
 #ifdef _NORMALMAP
@@ -206,21 +212,30 @@ void vert(inout appdata_full v, out Input o)
 	float3 normal = v.normal;
 	float4 tangent = v.tangent;
 	float3 binormal;
-	float3 objSpaceCameraPos = mul(unity_WorldToObject, float4(_WorldSpaceCameraPos.xyz, 1)).xyz;
+	float3 objSpaceCameraPos;
+
+#ifdef M_TRANSFORM
+	objSpaceCameraPos = mul(real_WorldToObject, float4(_WorldSpaceCameraPos.xyz, 1)).xyz;
+	pos = mul(real_WorldToObject, mul(unity_ObjectToWorld, pos));
+	normal = mul(real_WorldToObject, mul(unity_ObjectToWorld, normal));
+	#ifndef M_PARALLAX // Otherwise, the tangent is generated from the M_PARALLAX matrix
+	tangent.xyz = mul(real_WorldToObject, mul(unity_ObjectToWorld, tangent.xyz));
+	#endif
+#else
+	objSpaceCameraPos = mul(unity_WorldToObject, float4(_WorldSpaceCameraPos.xyz, 1)).xyz;
+#endif
+
+	float3 objSpaceViewDir = objSpaceCameraPos - pos.xyz;
 
 	// For POM, UV space needs to match tangent space
 	// In screen space, this is assured due to the geometry we're drawing
 	// but for an arbitrary matrix, we need to manually bring it into decal space
-	#ifdef SINGLE_MATRIX
-		//tangent = float4(-1, 0, 0, -1);
-		//objSpaceCameraPos = mul(_PrSingle, float4(objSpaceCameraPos, 1)).xyz;
-		//pos = mul(_PrSingle, pos);
-		tangent.xyz = normalize((float3)_PrSingle[0]);
-		binormal    = normalize((float3)_PrSingle[1]);
+	#ifdef M_PARALLAX
+		tangent.xyz = normalize((float3)M_PARALLAX[0]);
+		binormal    = normalize((float3)M_PARALLAX[1]) * unity_WorldTransformParams.w;
 	#else
 		binormal = cross(normalize(normal), normalize(tangent.xyz)) * tangent.w * unity_WorldTransformParams.w;
 	#endif
-	float3 objSpaceViewDir = objSpaceCameraPos - pos.xyz;
 
 	// Get tangent-space rotation matrix
 	float3x3 rotation = float3x3(tangent.xyz, binormal, normal);

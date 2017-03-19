@@ -193,7 +193,7 @@ namespace DecalSystem
 
 		protected MaterialPropertyBlock GetPropertyBlock()
 		{
-			return new MaterialPropertyBlock();
+			//return new MaterialPropertyBlock();
 			while(blockCache.Count <= blockIdx)
 				blockCache.Add(new MaterialPropertyBlock());
 			return blockCache[blockIdx++];
@@ -264,8 +264,12 @@ namespace DecalSystem
 
 							if (rend != null)
 							{
-								//commandBufferWrapper.CmdBuf = cmd;
-								//draw.AddShaderProperties(commandBufferWrapper);
+								commandBufferWrapper.CmdBuf = cmd;
+								// Skinned renderers sometimes transform themselves into odd positions between now and the draw call
+								// This breaks cases where we rely on a certain object space i.e. parallax
+								cmd.SetGlobalMatrix(ShaderKeywords.RealObjectToWorld, rend.localToWorldMatrix);
+								cmd.SetGlobalMatrix(ShaderKeywords.RealWorldToObject, rend.worldToLocalMatrix);
+								draw.AddShaderProperties(commandBufferWrapper);
 
 								foreach (var pass in passes)
 									cmd.DrawRenderer(rend, material, submesh, pass);

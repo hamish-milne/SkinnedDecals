@@ -11,10 +11,15 @@
 
 		public const string ScreenSpace = "_SCREENSPACE";
 
+		public const string BDecalMatrix = "_BDecalMatrix";
+
 		public const string ProjectorSingle = "_PrSingle";
 		public const string ProjectorMulti = "_PrMulti";
 
 		public const string Buffer = "_Buffer";
 		public const string UvChannel = "_UvChannel";
+
+		public const string RealWorldToObject = "real_WorldToObject";
+		public const string RealObjectToWorld = "real_ObjectToWorld";
 	}
 }

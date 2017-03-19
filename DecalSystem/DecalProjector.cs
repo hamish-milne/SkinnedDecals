@@ -143,7 +143,7 @@ namespace DecalSystem
 					if (FilterList(materialFilter, materialFilterMode, m))
 						submeshMask |= (1 << i);
 				}
-				mesh = ProjectionUtility.GetMesh(mesh, obj.transform, transform, obj.Mesh, submeshMask);
+				mesh = ProjectionUtility.GetMesh(mesh, obj.transform, transform, obj.Mesh, submeshMask, true);
 				mesh.name = obj.name + ":" + decal.name;
 				var newObj = new GameObject(decal.name);
 				newObj.transform.SetParent(obj.transform, false);

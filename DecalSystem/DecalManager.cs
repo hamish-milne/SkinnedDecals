@@ -90,7 +90,7 @@ namespace DecalSystem
 		{
 			if (decalCameraArray == null) return true;
 			foreach(var c in decalCameraArray)
-				if (c != null && !c.CanDrawRenderers(material))
+				if (c != null && c.Camera != sceneCamera && !c.CanDrawRenderers(material))
 					return false;
 			return true;
 		}

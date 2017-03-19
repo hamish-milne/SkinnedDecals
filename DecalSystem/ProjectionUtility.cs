@@ -100,16 +100,16 @@ namespace DecalSystem
 					continue;
 
 				// Compute the UV data at each vertex
-				uvData[t1] = ((Vector2) v1) + new Vector2(0.5f, 0.5f);
-				uvData[t2] = ((Vector2) v2) + new Vector2(0.5f, 0.5f);
-				uvData[t3] = ((Vector2) v3) + new Vector2(0.5f, 0.5f);
+				uvData[t1] = new Vector2(v1.x + 0.5f, v1.y + 0.5f);
+				uvData[t2] = new Vector2(v2.x + 0.5f, v2.y + 0.5f);
+				uvData[t3] = new Vector2(v3.x + 0.5f, v3.y + 0.5f);
 				ret = true;
 			}
 			Profiler.EndSample();
 			return ret;
 		}
 
-		public static Mesh GetMesh(Mesh mesh, Transform obj, Transform projector, Mesh skinnedMesh, int submeshMask)
+		public static Mesh GetMesh(Mesh mesh, Transform obj, Transform projector, Mesh skinnedMesh, int submeshMask, bool adjustTangents)
 		{
 			Profiler.BeginSample("Building static decal mesh");
 
@@ -165,7 +165,17 @@ namespace DecalSystem
 			var oldNormals = mesh.normals;
 			var oldTangents = mesh.tangents;
 			ret.normals = reverseMap.Select(id => oldNormals[id]).ToArray();
-			ret.tangents = reverseMap.Select(id => oldTangents[id]).ToArray();
+			if (adjustTangents)
+			{
+				var decalToObject = obj.worldToLocalMatrix * projector.localToWorldMatrix;
+				var bitangent = decalToObject.GetColumn(1);
+				var normal = decalToObject.GetColumn(2); // Using the original normal gives a different result, that may or may not be desired
+				ret.tangents = reverseMap
+					.Select(id => Vector3.Cross(normal, bitangent))
+					.Select(v => new Vector4(v.x, v.y, v.z, -1))
+					.ToArray();
+			} else
+				ret.tangents = reverseMap.Select(id => oldTangents[id]).ToArray();
 			ret.RecalculateBounds();
 			Profiler.EndSample();
 
