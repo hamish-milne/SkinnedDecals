@@ -5,6 +5,39 @@ using UnityEngine;
 
 namespace DecalSystem.Editor
 {
+	public static class AssetUtility
+	{
+		public const string Root = "Assets/IronDecal Assets/";
+
+		public static string GetUniquePath(string path, string ext)
+		{
+			int i = 0;
+			string fullPath;
+			do
+			{
+				fullPath = path + (i == 0 ? "" : $" ({i})") + ext;
+			} while (File.Exists(fullPath));
+			return fullPath;
+		}
+
+		public static void SaveBakedRederer(string pname, DecalMaterial material, Renderer r)
+		{
+			var assetDir = AssetDatabase.GetAssetPath(material);
+			assetDir = string.IsNullOrEmpty(assetDir) ?
+				"Assets" : Path.GetDirectoryName(assetDir);
+			assetDir += "/";
+			foreach (var m in r.sharedMaterials)
+				if (string.IsNullOrEmpty(AssetDatabase.GetAssetPath(m)))
+					AssetDatabase.CreateAsset(m, assetDir + m.name + ".mat");
+			// Saving the mesh is not necessary if the decal exists only in the scene, but if
+			// moved to a prefab it would otherwise break
+			var mesh = (r as SkinnedMeshRenderer)?.sharedMesh ?? r.GetComponent<MeshFilter>().sharedMesh;
+			if (string.IsNullOrEmpty(AssetDatabase.GetAssetPath(mesh)))
+				AssetDatabase.CreateAsset(mesh, assetDir +
+					pname + "_" + r.transform.parent?.name + "_" + material.name + ".asset");
+		}
+	}
+
 	[CustomEditor(typeof(DecalProjector))]
 	public class DecalProjectorEditor : UnityEditor.Editor
 	{
@@ -24,24 +57,10 @@ namespace DecalSystem.Editor
 			GUILayout.FlexibleSpace();
 			if (GUILayout.Button("Bake", GUILayout.Width(120f), GUILayout.Height(30f)))
 			{
-				Renderer[] renderers;
-				projector.ProjectBaked(out renderers);
+				projector.ProjectBaked(out var renderers);
 				// Create assets for default materials if needed
-				// TODO: Put these in a specific folder: IronDecal Assets?
-				var assetDir = AssetDatabase.GetAssetPath(projector.DecalMaterial);
-				assetDir = string.IsNullOrEmpty(assetDir) ?
-					"Assets" : Path.GetDirectoryName(assetDir);
-				assetDir += "/";
 				foreach (var r in renderers)
-				{
-					foreach(var m in r.sharedMaterials)
-						if(string.IsNullOrEmpty(AssetDatabase.GetAssetPath(m)))
-							AssetDatabase.CreateAsset(m, assetDir + m.name + ".mat");
-					var mesh = (r as SkinnedMeshRenderer)?.sharedMesh ?? r.GetComponent<MeshFilter>().sharedMesh;
-					if(string.IsNullOrEmpty(AssetDatabase.GetAssetPath(mesh)))
-						AssetDatabase.CreateAsset(mesh, assetDir +
-							projector.name + "_" + r.name + "_" + projector.DecalMaterial.name + ".asset");
-				}
+					AssetUtility.SaveBakedRederer(projector.name, projector.DecalMaterial, r);
 				Selection.activeObject = renderers.FirstOrDefault() ?? target;
 				EditorUtility.SetDirty(projector.DecalMaterial);
 			}

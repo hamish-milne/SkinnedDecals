@@ -4,7 +4,7 @@ using UnityEngine;
 namespace DecalSystem
 {
 	/// <summary>
-	/// Collects decal commands to render them, and provides other shared functionality
+	/// Manages DecalCamera instances
 	/// </summary>
 	[ExecuteInEditMode]
 	public class DecalManager : MonoBehaviour

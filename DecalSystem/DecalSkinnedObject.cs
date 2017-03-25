@@ -26,7 +26,7 @@ namespace DecalSystem
 			}
 		}
 
-		private SkinnedMeshRenderer skinnedRenderer;
+		[NonSerialized] private SkinnedMeshRenderer skinnedRenderer;
 		[NonSerialized] private int[][] triangleCache;
 		[NonSerialized] private Vector2[] uvBuffer;
 
@@ -453,18 +453,20 @@ namespace DecalSystem
 			}
 		}
 
-		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
+		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh, float maxNormal)
 		{
-			base.AddDecal(projector, decal, submesh);
+			base.AddDecal(projector, decal, submesh, maxNormal);
 			Profiler.BeginSample("Add skinned decal");
 			var mesh = GetCurrentMesh();
 			var verts = mesh.vertices;
+			var normals = mesh.normals; // TODO: Allow this to not be done
 			if (uvBuffer == null)
 				uvBuffer = new Vector2[verts.Length];
 			Profiler.BeginSample("Projecting");
 			ProjectionUtility.TransformVerts(verts, transform, projector);
+			ProjectionUtility.TransformNormals(normals, transform, projector);
 			var tris = GetTriangles(submesh);
-			var pResult = ProjectionUtility.Project(tris, verts, uvBuffer);
+			var pResult = ProjectionUtility.Project(tris, verts, normals, uvBuffer);
 			Profiler.EndSample();
 			if (!pResult)
 				return null;

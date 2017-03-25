@@ -7,6 +7,11 @@ using UnityEngine.Profiling;
 namespace DecalSystem
 {
 	// ReSharper disable once InconsistentNaming
+	/// <summary>
+	/// A general pair structure that will be faster than <c>KeyValuePair</c>
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="U"></typeparam>
 	public struct Pair<T, U> : IEquatable<Pair<T, U>>
 	{
 		public T First { get; }
@@ -29,44 +34,19 @@ namespace DecalSystem
 		}
 	}
 
-	// ReSharper disable once InconsistentNaming
-	public struct ObjPair<T, U> : IEquatable<ObjPair<T, U>> where T : UnityEngine.Object where U : IEquatable<U>
-	{
-		public T First { get; }
-		public U Second { get; }
-
-		public ObjPair(T first, U second)
-		{
-			First = first;
-			Second = second;
-		}
-
-		public override int GetHashCode()
-		{
-			return (First?.GetHashCode() ?? 0) * 17 ^ (Second?.GetHashCode() ?? 0) * 23;
-		}
-
-		public bool Equals(ObjPair<T, U> other)
-		{
-			return other.First.Equals(First) && other.Second.Equals(Second);
-		}
-	}
-
-
+	/// <summary>
+	/// Provides mesh projection functionality
+	/// </summary>
 	public static class ProjectionUtility
 	{
-		private static readonly Vector3[] planeMask =
-		{
-			new Vector3( 1,  0,  0),
-			new Vector3(-1,  0,  0),
-			new Vector3( 0,  1,  0),
-			new Vector3( 0, -1,  0),
-			new Vector3( 0,  0,  1),
-			new Vector3( 0,  0, -1),
-		};
 
-		public static void TransformVerts(Vector3[] verts,
-			Transform obj, Transform projector)
+		/// <summary>
+		/// Transforms the given vertex array into decal space
+		/// </summary>
+		/// <param name="verts">The array of verticies, modified in-place</param>
+		/// <param name="obj">The mesh-providing object in the scene</param>
+		/// <param name="projector">The projector transform</param>
+		public static void TransformVerts(Vector3[] verts, Transform obj, Transform projector)
 		{
 			Profiler.BeginSample("Transform vertices");
 			for (int i = 0; i < verts.Length; i++)
@@ -74,8 +54,16 @@ namespace DecalSystem
 			Profiler.EndSample();
 		}
 
-		// TODO: (maybe) Limit normals
-		public static bool Project(int[] tris, Vector3[] verts, Vector2[] uvData, bool dontClear = false)
+		public static void TransformNormals(Vector3[] normals, Transform obj, Transform projector)
+		{
+			if (normals == null) return;
+			Profiler.BeginSample("Transform normals");
+			for (int i = 0; i < normals.Length; i++)
+				normals[i] = projector.InverseTransformDirection(obj.TransformDirection(normals[i]));
+			Profiler.EndSample();
+		}
+		
+		public static bool Project(int[] tris, Vector3[] verts, Vector3[] normals, Vector2[] uvData, float maxNormal = 0f, bool dontClear = false)
 		{
 			if (!dontClear)
 			{
@@ -98,6 +86,11 @@ namespace DecalSystem
 
 				if (!CheckPlanes(v1, v2, v3))
 					continue;
+				if(normals != null)
+					if (normals[t1].z > maxNormal &&
+						normals[t2].z > maxNormal &&
+						normals[t3].z > maxNormal)
+						continue;
 
 				// Compute the UV data at each vertex
 				uvData[t1] = new Vector2(v1.x + 0.5f, v1.y + 0.5f);
@@ -109,16 +102,18 @@ namespace DecalSystem
 			return ret;
 		}
 
-		public static Mesh GetMesh(Mesh mesh, Transform obj, Transform projector, Mesh skinnedMesh, int submeshMask, bool adjustTangents)
+		public static Mesh GetMesh(Mesh mesh, Transform obj, Transform projector, Mesh skinnedMesh, int submeshMask, float? interpolateNormals, float maxNormal = 0f)
 		{
 			Profiler.BeginSample("Building static decal mesh");
 
 			var verts = mesh.vertices;
+			var normals = maxNormal < 1f ? mesh.normals : null;
 			var newVerts = new List<Vector3>(mesh.vertexCount);
 			var vertMap = new int[verts.Length];
 			var newTris = new List<int>(mesh.vertexCount);
 
 			TransformVerts(verts, obj, projector);
+			TransformNormals(normals, obj, projector);
 
 			for (int i = 0; i < vertMap.Length; i++)
 				vertMap[i] = -1;
@@ -127,7 +122,7 @@ namespace DecalSystem
 			if (submeshMask == 0)
 			{
 				Profiler.BeginSample("Processing triangles");
-				ProcessTriangles(mesh.triangles, verts, newTris, newVerts, vertMap);
+				ProcessTriangles(mesh.triangles, verts, newTris, newVerts, vertMap, normals, maxNormal);
 				Profiler.EndSample();
 			}
 			else
@@ -137,7 +132,7 @@ namespace DecalSystem
 					if ((submeshMask & 1 << i) != 0)
 						continue;
 					Profiler.BeginSample("Processing triangles for submesh " + i);
-					ProcessTriangles(mesh.GetTriangles(i), verts, newTris, newVerts, vertMap);
+					ProcessTriangles(mesh.GetTriangles(i), verts, newTris, newVerts, vertMap, normals, maxNormal);
 					Profiler.EndSample();
 				}
 			}
@@ -164,18 +159,27 @@ namespace DecalSystem
 			ret.SetTriangles(newTris, 0);
 			var oldNormals = mesh.normals;
 			var oldTangents = mesh.tangents;
-			ret.normals = reverseMap.Select(id => oldNormals[id]).ToArray();
-			if (adjustTangents)
+			if (interpolateNormals.HasValue)
 			{
 				var decalToObject = obj.worldToLocalMatrix * projector.localToWorldMatrix;
 				var bitangent = decalToObject.GetColumn(1);
-				var normal = decalToObject.GetColumn(2); // Using the original normal gives a different result, that may or may not be desired
-				ret.tangents = reverseMap
-					.Select(id => Vector3.Cross(normal, bitangent))
+				var normal = -(Vector3) decalToObject.GetColumn(2);
+				var t = interpolateNormals.Value;
+				var newNormals = reverseMap
+					.Select(id => Vector3.Lerp(oldNormals[id], normal, t))
+					.ToArray();
+				ret.normals = newNormals; // TODO: Replace with SetNormals etc.
+				//ret.normals = reverseMap.Select(id => oldNormals[id]).ToArray();
+				ret.tangents = newNormals
+					.Select(n => Vector3.Cross(n, bitangent))
 					.Select(v => new Vector4(v.x, v.y, v.z, -1))
 					.ToArray();
-			} else
+			}
+			else
+			{
+				ret.normals = reverseMap.Select(id => oldNormals[id]).ToArray();
 				ret.tangents = reverseMap.Select(id => oldTangents[id]).ToArray();
+			}
 			ret.RecalculateBounds();
 			Profiler.EndSample();
 
@@ -257,33 +261,54 @@ namespace DecalSystem
 			return ret;
 		}
 
-		static bool CheckPlanes(Vector3 v1, Vector3 v2, Vector3 v3)
+		private static bool CheckPlanes(Vector3 v1, Vector3 v2, Vector3 v3)
 		{
 			// Check that this triangle intersects the projection box
 			//     by checking that for each of the box's 6 planes, at least
 			//     one vertex is on the side facing the centre of the box
-			var check = true;
-			// Keep this as a loop for speed
-			// ReSharper disable once LoopCanBeConvertedToQuery
-			foreach (var p in planeMask)
-			{
-				if ((v1.x * p.x) + (v1.y * p.y) + (v1.z * p.z) < 0.5f ||
-					(v2.x * p.x) + (v2.y * p.y) + (v2.z * p.z) < 0.5f ||
-					(v3.x * p.x) + (v3.y * p.y) + (v3.z * p.z) < 0.5f)
-					continue;
-				check = false;
-				break;
-			}
-			return check;
+			if ( v1.x > 0.5f &&  // 1, 0, 0
+			     v2.x > 0.5f &&
+			     v3.x > 0.5f)
+				return false;
+			if (-v1.x > 0.5f &&  // -1, 0, 0
+			    -v2.x > 0.5f &&
+			    -v3.x > 0.5f)
+				return false;
+			if ( v1.y > 0.5f &&  // 0, 1, 0
+				 v2.y > 0.5f &&
+				 v3.y > 0.5f)
+				return false;
+			if (-v1.y > 0.5f &&  // 0, -1, 0
+				-v2.y > 0.5f &&
+				-v3.y > 0.5f)
+				return false;
+			if ( v1.z > 0.5f &&  // 0, 0, 1
+				 v2.z > 0.5f &&
+				 v3.z > 0.5f)
+				return false;
+			if (-v1.z > 0.5f &&  // 0, 0, -1
+				-v2.z > 0.5f &&
+				-v3.z > 0.5f)
+				return false;
+			return true;
 		}
 
-		static void ProcessTriangles(int[] tris, Vector3[] verts, List<int> newTris,
-			List<Vector3> newVerts, int[] vertMap)
+		private static void ProcessTriangles(int[] tris, Vector3[] verts, List<int> newTris,
+			List<Vector3> newVerts, int[] vertMap, Vector3[] normals = null, float maxNormal = 0f)
 		{
 			for (int i = 0; i < tris.Length; i += 3)
 			{
-				if (!CheckPlanes(verts[tris[i]], verts[tris[i + 1]], verts[tris[i + 2]]))
+				var t1 = tris[i];
+				var t2 = tris[i + 1];
+				var t3 = tris[i + 2];
+				if (!CheckPlanes(verts[t1], verts[t2], verts[t3]))
 					continue;
+				if (normals != null)
+					if (normals[t1].z > maxNormal &&
+						normals[t2].z > maxNormal &&
+						normals[t3].z > maxNormal)
+						continue;
+
 				for (int j = 0; j < 3; j++)
 				{
 					var t = tris[i + j];

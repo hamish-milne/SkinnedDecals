@@ -35,6 +35,7 @@
   <ItemGroup>
     <Compile Include="DecalCamera.cs" />
     <Compile Include="DecalFixedObject.cs" />
+    <Compile Include="DecalInstance.cs" />
     <Compile Include="DecalManager.cs" />
     <Compile Include="DecalMaterialStandard.cs" />
     <Compile Include="DecalObject.cs" />

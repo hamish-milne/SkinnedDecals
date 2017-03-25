@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace DecalSystem
@@ -51,7 +50,7 @@ namespace DecalSystem
 			throw new NotSupportedException();
 		}
 
-		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
+		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh, float maxNormal)
 		{
 			throw new NotSupportedException();
 		}

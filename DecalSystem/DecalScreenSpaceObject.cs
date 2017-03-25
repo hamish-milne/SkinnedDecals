@@ -55,9 +55,9 @@ namespace DecalSystem
 
 		public override Renderer Renderer => null;
 
-		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
+		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh, float maxNormal)
 		{
-			base.AddDecal(projector, decal, submesh);
+			base.AddDecal(projector, decal, submesh, maxNormal);
 			// Multiply projector matrix by local transform; This keeps the decal local to the space of the object
 			var ret = new ScreenSpaceInstance(this, decal,
 				transform.worldToLocalMatrix * projector.localToWorldMatrix);

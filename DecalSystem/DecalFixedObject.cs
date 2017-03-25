@@ -159,9 +159,9 @@ namespace DecalSystem
 			return drawGroups.Cast<IDecalDraw>();
 		}
 
-		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh)
+		public override DecalInstance AddDecal(Transform projector, DecalMaterial decal, int submesh, float maxNormal)
 		{
-			base.AddDecal(projector, decal, submesh);
+			base.AddDecal(projector, decal, submesh, maxNormal);
 			var matrix = transform.worldToLocalMatrix * projector.localToWorldMatrix;
 			var ret = new FixedInstance(this, decal, submesh, matrix);
 			instances.Add(ret);

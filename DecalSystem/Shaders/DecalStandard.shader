@@ -14,6 +14,8 @@
 
 		_Parallax ("Height Scale", Range (0, 1)) = 0.2
 		_ParallaxMap ("Height Map", 2D) = "black" {}
+		_ParallaxSampleMin ("Parallax sample min", Float) = 4
+		_ParallaxSampleMax ("Parallax sample max", Float) = 30
 
 		[HDR] _EmissionColor("Emission color", Color) = (0,0,0)
 		_EmissionMap("Emission map", 2D) = "white" {}

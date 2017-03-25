@@ -48,7 +48,7 @@ namespace DecalSystem
 			setter.Invoke(target, paramArray);
 		}
 
-		static Action<DecalMaterial, T> GetRefreshMethod<T>(FieldInfo field, string name)
+		private static Action<DecalMaterial, T> GetRefreshMethod<T>(FieldInfo field, string name)
 		{
 			var setter = typeof(T)
 				.GetMethods()
@@ -63,7 +63,7 @@ namespace DecalSystem
 			};
 		}
 
-		static void GetFields(Type type, out FieldInfo[] fields, out MaterialPropertyAttribute[] attrs)
+		private static void GetFields(Type type, out FieldInfo[] fields, out MaterialPropertyAttribute[] attrs)
 		{
 			fields = type
 				.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
@@ -74,7 +74,7 @@ namespace DecalSystem
 				.ToArray();
 		}
 
-		static PropertyActions[] GetPropertyActions(Type type)
+		private static PropertyActions[] GetPropertyActions(Type type)
 		{
 			if (propertyActions.TryGetValue(type, out PropertyActions[] ret))
 				return ret;
@@ -96,7 +96,12 @@ namespace DecalSystem
 
 		private Dictionary<string, string> propertyMap;
 
-		public string GetFieldForProperty(string propertyName)
+		/// <summary>
+		/// Gets the backing field for the given property name on this instance
+		/// </summary>
+		/// <param name="propertyName"></param>
+		/// <returns></returns>
+		public virtual string GetFieldForProperty(string propertyName)
 		{
 			if (propertyMap == null)
 			{
@@ -160,12 +165,11 @@ namespace DecalSystem
 		}
 
 		/// <summary>
-		/// Applies this material's properties to another property block
+		/// Applies this material's properties to another property block, without clearing
 		/// </summary>
 		/// <param name="properties"></param>
 		public virtual void CopyTo(MaterialPropertyBlock properties)
 		{
-			// TODO: Clear here?
 			foreach (var prop in GetPropertyActions(GetType()))
 				prop.propertyBlockAction(this, properties);
 		}
@@ -267,15 +271,18 @@ namespace DecalSystem
 		}
 
 		/// <summary>
-		/// Returns a cached <c>Material</c> that can be used to render the decal
+		/// Returns a cached <c>Material</c> that can be used to render the decal.
+		/// This overload also caches based on a provided integer property; this is useful for culling, blend modes etc.
 		/// </summary>
 		/// <param name="modeString">A keyword that generally defines how the decal position
 		/// is read. This needs to be agreed between the decal renderer and shader code.</param>
+		/// <param name="propertyName">The integer property name.</param>
+		/// <param name="value">The integer property value</param>
 		/// <returns>A cached material with the correct shader and keywords set, or <c>null</c>
 		/// if the given mode is not supported.</returns>
 		public virtual Material GetMaterial(string modeString, string propertyName, int value)
 		{
-			if (modeString == "")
+			if (string.IsNullOrEmpty(modeString))
 				return defaultMaterial != null ? defaultMaterial : (defaultMaterial
 					= CreateMaterial(""));
 			if (string.IsNullOrEmpty(propertyName))
@@ -306,6 +313,13 @@ namespace DecalSystem
 			return mat;
 		}
 
+		/// <summary>
+		/// Returns a cached <c>Material</c> that can be used to render the decal.
+		/// </summary>
+		/// <param name="modeString">A keyword that generally defines how the decal position
+		/// is read. This needs to be agreed between the decal renderer and shader code.</param>
+		/// <returns>A cached material with the correct shader and keywords set, or <c>null</c>
+		/// if the given mode is not supported.</returns>
 		public Material GetMaterial(string modeString)
 		{
 			return GetMaterial(modeString, null, default(int));

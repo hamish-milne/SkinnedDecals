@@ -8,8 +8,8 @@ Material:
   m_PrefabInternal: {fileID: 0}
   m_Name: Test POMDefault
   m_Shader: {fileID: 4800000, guid: 750aca623e2b86247859ddf14816223f, type: 3}
-  m_ShaderKeywords: _PARALLAXMAP _POM
-  m_LightmapFlags: 5
+  m_ShaderKeywords: _NORMALMAP _PARALLAXMAP _POM
+  m_LightmapFlags: 1
   m_CustomRenderQueue: -1
   stringTagMap: {}
   m_SavedProperties:
@@ -19,6 +19,24 @@ Material:
         name: _BumpMap
       second:
         m_Texture: {fileID: 2800000, guid: 1c3aeef52b95ee24facbc5aa3d07c081, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - first:
+        name: _DetailAlbedoMap
+      second:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - first:
+        name: _DetailMask
+      second:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - first:
+        name: _DetailNormalMap
+      second:
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - first:
@@ -40,6 +58,12 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - first:
+        name: _OcclusionMap
+      second:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - first:
         name: _ParallaxMap
       second:
         m_Texture: {fileID: 2800000, guid: 84c11a0db80f6144eb14445bba21229e, type: 3}
@@ -53,14 +77,56 @@ Material:
         name: _Cull
       second: 2
     - first:
-        name: _Glossiness
+        name: _Cutoff
+      second: 0.5
+    - first:
+        name: _DetailNormalMapScale
+      second: 1
+    - first:
+        name: _DstBlend
       second: 0
+    - first:
+        name: _GlossMapScale
+      second: 1
+    - first:
+        name: _Glossiness
+      second: 0.757
+    - first:
+        name: _GlossyReflections
+      second: 1
     - first:
         name: _Metallic
       second: 0
     - first:
+        name: _Mode
+      second: 0
+    - first:
+        name: _OcclusionStrength
+      second: 1
+    - first:
         name: _Parallax
-      second: 0.163
+      second: 0.088
+    - first:
+        name: _ParallaxSampleMax
+      second: 30
+    - first:
+        name: _ParallaxSampleMin
+      second: 4
+    - first:
+        name: _SmoothnessTextureChannel
+      second: 0
+    - first:
+        name: _SpecularHighlights
+      second: 1
+    - first:
+        name: _SrcBlend
+      second: 1
+    - first:
+        name: _UVSec
+      second: 0
+    - first:
+        name: _ZWrite
+      second: 1
     m_Colors:
     - first:
         name: _Color

@@ -16,20 +16,22 @@ namespace DecalSystem
 		private static HashSet<string> supportedKeywords;
 
 		/// <summary>
-		/// Draws most decal types
+		/// The Decal shader.
 		/// </summary>
 		public virtual Shader ShaderInstance => shaderInstance ?? (shaderInstance = Shader.Find("Decal/Standard"));
 
-		[SerializeField, MaterialProperty("_Color")]            protected Color color = Color.white;
-		[SerializeField, MaterialProperty("_EmissionColor")]    protected Color emission = Color.black;
-		[SerializeField, MaterialProperty("_Glossiness")]       protected float smoothness;
-		[SerializeField, MaterialProperty("_Metallic")]         protected float metallic;
-		[SerializeField, MaterialProperty("_Parallax")]         protected float parallax;
-		[SerializeField, MaterialProperty("_MainTex")]          protected Texture2D albedo;
-		[SerializeField, MaterialProperty("_BumpMap")]          protected Texture2D normal;
-		[SerializeField, MaterialProperty("_MetallicGlossMap")] protected Texture2D roughnessMap;
-		[SerializeField, MaterialProperty("_ParallaxMap")]      protected Texture2D parallaxMap;
-		[SerializeField, MaterialProperty("_EmissionMap")]      protected Texture2D emissionMap;
+		[SerializeField, MaterialProperty("_Color")]             protected Color color = Color.white;
+		[SerializeField, MaterialProperty("_EmissionColor")]     protected Color emission = Color.black;
+		[SerializeField, MaterialProperty("_Glossiness")]        protected float smoothness;
+		[SerializeField, MaterialProperty("_Metallic")]          protected float metallic;
+		[SerializeField, MaterialProperty("_Parallax")]          protected float parallax;
+		[SerializeField, MaterialProperty("_ParallaxSampleMin")] protected int parallaxSampleMin;
+		[SerializeField, MaterialProperty("_ParallaxSampleMax")] protected int parallaxSampleMax;
+		[SerializeField, MaterialProperty("_MainTex")]           protected Texture2D albedo;
+		[SerializeField, MaterialProperty("_BumpMap")]           protected Texture2D normal;
+		[SerializeField, MaterialProperty("_MetallicGlossMap")]  protected Texture2D roughnessMap;
+		[SerializeField, MaterialProperty("_ParallaxMap")]       protected Texture2D parallaxMap;
+		[SerializeField, MaterialProperty("_EmissionMap")]       protected Texture2D emissionMap;
 
 		public override void SetKeywords(Action<string> addKeyword, Action<string> removeKeyword)
 		{
@@ -59,6 +61,8 @@ namespace DecalSystem
 			if (supportedKeywords == null)
 			{
 				var mat = new Material(ShaderInstance);
+				// The shader may have multiple sub-shaders for different capabilities
+				// Mode support is indicated by a tag value, DecalSystem_<Mode> = true
 				supportedKeywords = new HashSet<string>(new []
 				{
 					"_",

@@ -5,18 +5,34 @@ using UnityEngine.Rendering;
 
 namespace DecalSystem
 {
+	/// <summary>
+	/// Provides a consistent interface for setting material override properties
+	/// </summary>
 	public interface IShaderProperties
 	{
+		/// <summary>
+		/// Sets a material property to the given value
+		/// </summary>
+		/// <typeparam name="T">The property type</typeparam>
+		/// <param name="name"></param>
+		/// <param name="value"></param>
 		void Add<T>(string name, T value);
 	}
 
 	public class ShaderPropertiesBase
 	{
+		/// <summary>
+		/// Property names here have been set globally, and will therefore override all other values
+		/// </summary>
 		protected static readonly HashSet<string> globalPropertyNames = new HashSet<string>();
 	}
 
+	/// <summary>
+	/// Shader properties wrapper for CommandBuffers. Uses the 'SetGlobal' functions
+	/// </summary>
 	public class CommandBufferWrapper : ShaderPropertiesBase, IShaderProperties
 	{
+		// Map types to methods
 		private static readonly Dictionary<Type, string> methodNames
 		= new Dictionary<Type, string>
 		{
@@ -34,6 +50,7 @@ namespace DecalSystem
 			{ typeof(List<Vector4>), nameof(CommandBuffer.SetGlobalVectorArray) },
 		};
 
+		// Cache the setter method as a delegate
 		private static class MethodRef<T>
 		{
 			public delegate void SetMethod(CommandBuffer buf, string name, T value);
@@ -48,6 +65,9 @@ namespace DecalSystem
 			}
 		}
 
+		/// <summary>
+		/// The command buffer to add to.
+		/// </summary>
 		public CommandBuffer CmdBuf { get; set; }
 
 		public void Add<T>(string name, T value)
@@ -60,6 +80,9 @@ namespace DecalSystem
 		}
 	}
 
+	/// <summary>
+	/// Shader properties wrapper for a MaterialPropertyBlock
+	/// </summary>
 	public class PropertyBlockWrapper : ShaderPropertiesBase, IShaderProperties
 	{
 		private static readonly Dictionary<Type, string> methodNames
@@ -94,7 +117,7 @@ namespace DecalSystem
 		}
 
 		public MaterialPropertyBlock PropertyBlock { get; set; }
-		public CommandBuffer CmdBuf { get; set; }
+		public IShaderProperties CmdBuf { get; set; }
 
 		public void Add<T>(string name, T value)
 		{
@@ -102,16 +125,20 @@ namespace DecalSystem
 			if (MethodRef<T>.Method == null)
 				throw new Exception("Unsupported property type: " + typeof(T));
 
-			// Workaround for SetBuffer not working for command buffers (what?)
-			if (CmdBuf != null && (typeof(T) == typeof(ComputeBuffer) || globalPropertyNames.Contains(name)))
+			// Any property set globally once needs to always be done the same way, or it'll just get ignored
+			// When Unity introduces a 'clear global' function, we can change this
+			// Also, *all* ComputeBuffer values need to be set globally if a CommandBuffer is being used - MaterialPropertyBlock.SetBuffer doesn't work
+			if (CmdBuf != null &&
+				CmdBuf != this && // Should never happen, but just in case to prevent recursion
+				(typeof(T) == typeof(ComputeBuffer) || globalPropertyNames.Contains(name)))
 			{
 				globalPropertyNames.Add(name);
-				CmdBuf.SetGlobalBuffer(name, (ComputeBuffer) (object) value);
+				CmdBuf.Add(name, value);
 			}
 			else
 			{
 				if(globalPropertyNames.Contains(name))
-					Debug.LogWarning("The shader property " + name + " is being set globally, and will be overridden");
+					Debug.LogWarning("The shader property " + name + " is being set globally, and will probably be overridden");
 				MethodRef<T>.Method(PropertyBlock, name, value);
 			}
 		}

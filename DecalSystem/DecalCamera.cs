@@ -13,7 +13,7 @@ namespace DecalSystem
 	public class DecalCamera : MonoBehaviour
 	{
 		/// <summary>
-		/// Saves the previous, default depth texture mode here. Some decals require a separate, explicit depth texture
+		/// Saves the previous, default depth texture mode here. Some decals require a depth texture
 		/// </summary>
 		[SerializeField, HideInInspector] protected DepthTextureMode depthTextureMode;
 
@@ -148,6 +148,7 @@ namespace DecalSystem
 			cmdDepthZtest.Clear();
 			SetupCommandBuffer(evtDepthTexture, cmdDepthTexture);
 			SetupCommandBuffer(evtDepthZtest, cmdDepthZtest);
+			ResetFrame();
 			DrawDecals(cmdDepthTexture, cmdDepthZtest);
 		}
 
@@ -179,24 +180,62 @@ namespace DecalSystem
 
 		// Static plane array to avoid allocations
 		private readonly Plane[] cameraPlanes = new Plane[6];
+		private bool cameraPlanesCalculated;
 
+		/// <summary>
+		/// Gets the cached camera frustum planes this frame
+		/// </summary>
+		/// <returns>The array of planes; this is a cached array, so should not be modified</returns>
+		protected Plane[] GetCameraPlanes()
+		{
+			if (!cameraPlanesCalculated)
+			{
+				Util.ExtractPlanes(cameraPlanes, Camera);
+				cameraPlanesCalculated = true;
+			}
+			return cameraPlanes;
+		}
+
+		// Cache the property interface wrappers
 		private readonly PropertyBlockWrapper propertyBlockWrapper = new PropertyBlockWrapper();
 		private readonly CommandBufferWrapper commandBufferWrapper = new CommandBufferWrapper();
 
+		// The block cache - this saves allocating new MaterialPropertyBlock instances
 		private int blockIdx;
 		private readonly List<MaterialPropertyBlock> blockCache = new List<MaterialPropertyBlock>();
 
-		protected void ResetBlockCache()
+		/// <summary>
+		/// Acquires a new or cached, empty material property block
+		/// </summary>
+		/// <returns></returns>
+		protected virtual MaterialPropertyBlock GetPropertyBlock()
 		{
-			blockIdx = 0;
-		}
-
-		protected MaterialPropertyBlock GetPropertyBlock()
-		{
-			//return new MaterialPropertyBlock();
 			while(blockCache.Count <= blockIdx)
 				blockCache.Add(new MaterialPropertyBlock());
 			return blockCache[blockIdx++];
+		}
+
+		protected virtual bool IsObjectVisible(DecalObject obj)
+		{
+			if (obj.ManualCulling)
+			{
+				if (!GeometryUtility.TestPlanesAABB(GetCameraPlanes(), obj.Bounds))
+					return false;
+			}
+			else if (!toRender.Contains(obj))
+				return false;
+			return true;
+		}
+
+		/// <summary>
+		/// This should be called at least once before drawing begins
+		/// </summary>
+		protected void ResetFrame()
+		{
+			cameraPlanesCalculated = false;
+			for (int i = 0; i < blockIdx; i++)
+				blockCache[i].Clear();
+			blockIdx = 0;
 		}
 
 		/// <summary>
@@ -204,30 +243,20 @@ namespace DecalSystem
 		/// </summary>
 		/// <param name="cDepthTexture">Where depth-reading decals should be added</param>
 		/// <param name="cDepthZtest">Where depth-testing decals should be added</param>
-		public void DrawDecals(CommandBuffer cDepthTexture, CommandBuffer cDepthZtest)
+		public virtual void DrawDecals(CommandBuffer cDepthTexture, CommandBuffer cDepthZtest)
 		{
 			var rp = Camera.actualRenderingPath;
 			bool requireDepth = false;
 			var activeObjects = DecalObject.ActiveObjects;
-			var cameraPlanesCalculated = false;
-			ResetBlockCache();
 			// ReSharper disable once ForCanBeConvertedToForeach
 			for (int j = 0; j < activeObjects.Count; j++)
 			{
 				var obj = activeObjects[j];
+				// obj should never be null, but just in case...
+				if (obj == null) continue;
 
 				// Object culling
-				if (obj.ManualCulling)
-				{
-					if (!cameraPlanesCalculated)
-					{
-						Util.ExtractPlanes(cameraPlanes, Camera);
-						cameraPlanesCalculated = true;
-					}
-					if (!GeometryUtility.TestPlanesAABB(cameraPlanes, obj.Bounds))
-						continue;
-				} else if (!toRender.Contains(obj))
-					continue;
+				if (!IsObjectVisible(obj)) continue;
 
 				var draws = obj.GetDecalDraws();
 				if (draws == null) continue;
@@ -278,7 +307,8 @@ namespace DecalSystem
 							{
 								var block = GetPropertyBlock();
 								propertyBlockWrapper.PropertyBlock = block;
-								propertyBlockWrapper.CmdBuf = cmd;
+								commandBufferWrapper.CmdBuf = cmd;
+								propertyBlockWrapper.CmdBuf = commandBufferWrapper;
 								draw.AddShaderProperties(propertyBlockWrapper);
 
 								foreach (var pass in passes)

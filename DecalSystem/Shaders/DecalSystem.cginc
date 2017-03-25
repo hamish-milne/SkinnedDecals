@@ -128,6 +128,8 @@ uniform float _Metallic;
 #ifdef _PARALLAXMAP
 uniform float _Parallax;
 uniform sampler2D _ParallaxMap;
+uniform uint _ParallaxSampleMin;
+uniform uint _ParallaxSampleMax;
 #endif
 
 #ifdef _EMISSION
@@ -240,14 +242,14 @@ void vert(inout appdata_full v, out Input o)
 	// Get tangent-space rotation matrix
 	float3x3 rotation = float3x3(tangent.xyz, binormal, normal);
 
-	float sampleRatio = dot(normalize(objSpaceViewDir), normal) + 1;
+	float sampleRatio = 1-dot(normalize(objSpaceViewDir), normal);
 	o.viewDirForParallax = float4(mul(rotation, objSpaceViewDir), sampleRatio);
 
 #endif
 }
 
 #ifdef _PARALLAXMAP
-#define OUTPUT_PARALLAX(UV) { UV.xy += parallax_offset(_Parallax, IN.viewDirForParallax.xyz, IN.viewDirForParallax.w, UV, _ParallaxMap, 4, 30); }
+#define OUTPUT_PARALLAX(UV) { UV.xy += parallax_offset(_Parallax, IN.viewDirForParallax.xyz, IN.viewDirForParallax.w, UV, _ParallaxMap, _ParallaxSampleMin, _ParallaxSampleMax); }
 #else
 #define OUTPUT_PARALLAX(UV)
 #endif
