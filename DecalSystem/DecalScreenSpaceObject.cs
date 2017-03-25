@@ -4,6 +4,10 @@ using UnityEngine;
 
 namespace DecalSystem
 {
+	/// <summary>
+	/// Renders decals in screen space. This is cheap to do and works on terrains, but the decal can bleed into
+	/// other objects that intersect the bounding box.
+	/// </summary>
 	[RendererType(typeof(Terrain))]
 	public class DecalScreenSpaceObject : DecalObjectBase
 	{

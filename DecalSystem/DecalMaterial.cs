@@ -29,6 +29,7 @@ namespace DecalSystem
 		{
 			{typeof (Color),     nameof(Material.SetColor)},
 			{typeof (float),     nameof(Material.SetFloat)},
+			{typeof (int),       nameof(Material.SetFloat)},
 			{typeof (Matrix4x4), nameof(Material.SetMatrix)},
 			{typeof (Texture),   nameof(Material.SetTexture)},
 			{typeof (Texture2D), nameof(Material.SetTexture)},

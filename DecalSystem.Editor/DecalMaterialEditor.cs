@@ -24,8 +24,6 @@ namespace DecalSystem.Editor
 			materialEditor.serializedObject.Update();
 			if (materialEditor.PropertiesGUI())
 			{
-				// Get the value directly, to save LOC switching through each property type
-				var mValue = typeof (MaterialProperty).GetField("m_Value", BindingFlags.Instance | BindingFlags.NonPublic);
 				foreach (var p in MaterialEditor.GetMaterialProperties(materialEditor.targets))
 				{
 					// Don't update mixed-value properties
@@ -39,23 +37,23 @@ namespace DecalSystem.Editor
 					if(fieldName == null) continue;
 					var prop = serializedObject.FindProperty(fieldName);
 					if(prop == null) continue;
-					// If m_Value doesn't exist, we're really boned, so..
-					// ReSharper disable once PossibleNullReferenceException
-					var value = mValue.GetValue(p);
-					// Now switch through each property type anyway, because this is the only way to do it
-					switch (prop.propertyType)
+					switch (p.type)
 					{
-						case SerializedPropertyType.Float:
-							prop.floatValue = (float) value;
+						case MaterialProperty.PropType.Float:
+						case MaterialProperty.PropType.Range:
+							if (prop.propertyType == SerializedPropertyType.Integer)
+								prop.intValue = (int) p.floatValue;
+							else
+								prop.floatValue = p.floatValue;
 							break;
-						case SerializedPropertyType.Vector4:
-							prop.vector4Value = (Vector4) value;
+						case MaterialProperty.PropType.Vector:
+							prop.vector4Value = p.vectorValue;
  							break;
-						case SerializedPropertyType.Color:
-							prop.colorValue = (Color) value;
+						case MaterialProperty.PropType.Color:
+							prop.colorValue = p.colorValue;
 							break;
-						case SerializedPropertyType.ObjectReference:
-							prop.objectReferenceValue = (Object) value;
+						case MaterialProperty.PropType.Texture:
+							prop.objectReferenceValue = p.textureValue;
 							break;
 					}
 				}
