@@ -47,13 +47,13 @@ namespace DecalSystem
 
 			public override bool Enabled
 			{
-				get { return base.Enabled; }
+				get => base.Enabled;
 				set { base.Enabled = value; obj.ClearData(); }
 			}
 
 			public override DecalMaterial DecalMaterial
 			{
-				get { return base.DecalMaterial; }
+				get => base.DecalMaterial;
 				set { base.DecalMaterial = value; obj.ClearData(); }
 			}
 

@@ -11,7 +11,9 @@ namespace DecalSystem
 	[RendererType(typeof(Terrain))]
 	public class DecalScreenSpaceObject : DecalObjectBase
 	{
-
+		/// <summary>
+		/// A screen space instance, defined by a local matrix
+		/// </summary>
 		[Serializable]
 		protected class ScreenSpaceInstance : DecalInstanceBase
 		{
@@ -85,6 +87,9 @@ namespace DecalSystem
 
 		private static Mesh cubeMesh;
 
+		/// <summary>
+		/// The Cube mesh provided by the built-in resources
+		/// </summary>
 		public static Mesh CubeMesh
 		{
 			get

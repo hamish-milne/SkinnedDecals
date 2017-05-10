@@ -168,8 +168,7 @@ namespace DecalSystem
 				var newNormals = reverseMap
 					.Select(id => Vector3.Lerp(oldNormals[id], normal, t))
 					.ToArray();
-				ret.normals = newNormals; // TODO: Replace with SetNormals etc.
-				//ret.normals = reverseMap.Select(id => oldNormals[id]).ToArray();
+				ret.normals = newNormals;
 				ret.tangents = newNormals
 					.Select(n => Vector3.Cross(n, bitangent))
 					.Select(v => new Vector4(v.x, v.y, v.z, -1))

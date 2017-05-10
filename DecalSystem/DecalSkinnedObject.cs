@@ -16,7 +16,7 @@ namespace DecalSystem
 
 		public bool AllowMerge
 		{
-			get { return allowMerge; }
+			get => allowMerge;
 			set
 			{
 				if (allowMerge == value) return;
@@ -60,7 +60,7 @@ namespace DecalSystem
 
 			public override DecalMaterial DecalMaterial
 			{
-				get { return base.DecalMaterial; }
+				get => base.DecalMaterial;
 				set
 				{
 					if (base.DecalMaterial == value) return;
@@ -78,7 +78,7 @@ namespace DecalSystem
 
 			public override bool Enabled
 			{
-				get { return base.Enabled; }
+				get => base.Enabled;
 				set
 				{
 					if (base.Enabled == value) return;

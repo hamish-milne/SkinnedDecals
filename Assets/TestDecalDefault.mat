@@ -61,6 +61,12 @@ Material:
     - first:
         name: _Parallax
       second: 0.08
+    - first:
+        name: _ParallaxSampleMax
+      second: 0
+    - first:
+        name: _ParallaxSampleMin
+      second: 0
     m_Colors:
     - first:
         name: _Color

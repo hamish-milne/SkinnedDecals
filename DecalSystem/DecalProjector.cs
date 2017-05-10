@@ -45,8 +45,8 @@ namespace DecalSystem
 		/// </summary>
 		public virtual DecalMaterial DecalMaterial
 		{
-			get { return decal; }
-			set { decal = value; }
+			get => decal;
+			set => decal = value;
 		}
 
 		/// <summary>
@@ -54,8 +54,8 @@ namespace DecalSystem
 		/// </summary>
 		public virtual FilterMode ObjectFilterMode
 		{
-			get { return objectFilterMode; }
-			set { objectFilterMode = value; }
+			get => objectFilterMode;
+			set => objectFilterMode = value;
 		}
 
 		/// <summary>
@@ -63,8 +63,8 @@ namespace DecalSystem
 		/// </summary>
 		public virtual FilterMode MaterialFilterMode
 		{
-			get { return materialFilterMode; }
-			set { materialFilterMode = value; }
+			get => materialFilterMode;
+			set => materialFilterMode = value;
 		}
 
 		/// <summary>
@@ -74,8 +74,8 @@ namespace DecalSystem
 		/// </summary>
 		public virtual float MaxNormal
 		{
-			get { return maxNormal; }
-			set { maxNormal = value; }
+			get => maxNormal;
+			set => maxNormal = value;
 		}
 
 		/// <summary>
@@ -85,8 +85,8 @@ namespace DecalSystem
 		/// </summary>
 		public virtual float? NormalInterpolate
 		{
-			get { return bakedNormalInterpolate < 0 ? default(float?) : bakedNormalInterpolate; }
-			set { bakedNormalInterpolate = value ?? -1f; }
+			get => bakedNormalInterpolate < 0 ? default(float?) : bakedNormalInterpolate;
+			set => bakedNormalInterpolate = value ?? -1f;
 		}
 
 		/// <summary>

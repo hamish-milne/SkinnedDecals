@@ -15,8 +15,8 @@ namespace DecalSystem
 		/// </summary>
 		public virtual DecalMaterial DecalMaterial
 		{
-			get { return decalMaterial; }
-			set { decalMaterial = value; }
+			get => decalMaterial;
+			set => decalMaterial = value;
 		}
 
 		public override bool ScreenSpace => true;
@@ -78,8 +78,8 @@ namespace DecalSystem
 
 			public override DecalMaterial DecalMaterial
 			{
-				get { return obj.decalMaterial; }
-				set { obj.decalMaterial = value; }
+				get => obj.decalMaterial;
+				set => obj.decalMaterial = value;
 			}
 
 			public override void GetDrawCommand(DecalCamera dcam,
@@ -97,8 +97,8 @@ namespace DecalSystem
 
 			public override bool Enabled
 			{
-				get { return obj.enabled; }
-				set { obj.enabled = value; }
+				get => obj.enabled;
+				set => obj.enabled = value;
 			}
 
 			public DecalInstanceSingle(DecalSingle obj)

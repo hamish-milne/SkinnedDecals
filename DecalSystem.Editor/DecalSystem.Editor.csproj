@@ -31,9 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="RefreshOnChangeDrawer.cs" />
     <Compile Include="DecalMaterialEditor.cs" />
     <Compile Include="DecalProjectorEditor.cs" />
+    <Compile Include="MatrixDrawer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UseProperty.cs" />
   </ItemGroup>

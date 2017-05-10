@@ -5,12 +5,6 @@ using UnityEngine;
 
 namespace DecalSystem.Editor
 {
-	/// <summary>
-	/// This lets us use GUILayout methods in a PropertyDrawer. I have no idea how or why this works.
-	/// </summary>
-	[CustomEditor(typeof(MonoBehaviour), true)]
-	public class DummyEditor : UnityEditor.Editor { }
-
 	[CustomPropertyDrawer(typeof(Matrix4x4))]
 	public class MatrixDrawer : PropertyDrawer
 	{
@@ -24,7 +18,7 @@ namespace DecalSystem.Editor
 
 		public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
 		{
-			return (property.isExpanded ? 4 : 1)*(EditorGUIUtility.singleLineHeight + 1f);
+			return (property.isExpanded ? 4 : 1)*(EditorGUIUtility.singleLineHeight + 1f) + 2f;
 		}
 
 		private static Rect TakeLine(Rect position, ref float y)
